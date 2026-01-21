@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 
 // Room type colors for visual distinction
 const ROOM_COLORS = {
@@ -17,6 +17,18 @@ const ROOM_COLORS = {
   other: '#9ca3af',       // Gray
 }
 
+// 8-point resize handle definitions
+const RESIZE_HANDLES = [
+  { id: 'nw', cursor: 'nw-resize', x: 0, y: 0 },
+  { id: 'n', cursor: 'n-resize', x: 0.5, y: 0 },
+  { id: 'ne', cursor: 'ne-resize', x: 1, y: 0 },
+  { id: 'e', cursor: 'e-resize', x: 1, y: 0.5 },
+  { id: 'se', cursor: 'se-resize', x: 1, y: 1 },
+  { id: 's', cursor: 's-resize', x: 0.5, y: 1 },
+  { id: 'sw', cursor: 'sw-resize', x: 0, y: 1 },
+  { id: 'w', cursor: 'w-resize', x: 0, y: 0.5 },
+]
+
 // Default room dimensions by type (mm)
 const DEFAULT_ROOM_SIZES = {
   living: { width: 4000, depth: 3500 },
@@ -34,9 +46,82 @@ const DEFAULT_ROOM_SIZES = {
   other: { width: 3000, depth: 3000 },
 }
 
+// Dimension validation limits (mm)
+const DIMENSION_LIMITS = {
+  minWidth: 500,    // 0.5m minimum
+  maxWidth: 20000,  // 20m maximum
+  minDepth: 500,
+  maxDepth: 20000,
+  minPosition: 0,
+  maxPosition: 50000,
+}
+
+// Validation helper function
+const validateDimension = (value, min, max) => {
+  const num = parseFloat(value)
+  if (isNaN(num)) return { valid: false, error: 'Must be a number' }
+  if (num < min) return { valid: false, error: `Min: ${min}mm` }
+  if (num > max) return { valid: false, error: `Max: ${max}mm` }
+  return { valid: true, value: num }
+}
+
+// Throttle helper for smooth drag/resize performance
+const throttle = (func, limit) => {
+  let inThrottle = false
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args)
+      inThrottle = true
+      setTimeout(() => inThrottle = false, limit)
+    }
+  }
+}
+
+// Validated input component with error feedback
+function ValidatedInput({ value, onChange, min, max, label }) {
+  const [localValue, setLocalValue] = useState(value)
+  const [error, setError] = useState(null)
+
+  // Sync local value when prop changes (e.g., from drag/resize)
+  useEffect(() => {
+    setLocalValue(value)
+    setError(null)
+  }, [value])
+
+  const handleChange = (e) => {
+    const val = e.target.value
+    setLocalValue(val)
+    const result = validateDimension(val, min, max)
+    if (result.valid) {
+      setError(null)
+      onChange(result.value)
+    } else {
+      setError(result.error)
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-sm text-slate-400 mb-1">{label}</label>
+      <input
+        type="number"
+        value={localValue}
+        onChange={handleChange}
+        min={min}
+        max={max}
+        className={`w-full px-3 py-2 bg-slate-700 border rounded text-white text-sm ${
+          error ? 'border-red-500' : 'border-slate-600'
+        }`}
+      />
+      {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+    </div>
+  )
+}
+
 function Room({ room, scale, isSelected, onSelect, onDrag, onResize }) {
   const [isDragging, setIsDragging] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
+  const [resizeHandle, setResizeHandle] = useState(null)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
 
   const x = room.position.x * scale
@@ -46,7 +131,9 @@ function Room({ room, scale, isSelected, onSelect, onDrag, onResize }) {
 
   const handleMouseDown = (e) => {
     if (e.target.classList.contains('resize-handle')) {
+      const handleId = e.target.getAttribute('data-handle')
       setIsResizing(true)
+      setResizeHandle(handleId)
     } else {
       setIsDragging(true)
     }
@@ -55,35 +142,40 @@ function Room({ room, scale, isSelected, onSelect, onDrag, onResize }) {
     e.stopPropagation()
   }
 
-  const handleMouseMove = useCallback((e) => {
-    if (isDragging) {
-      const dx = (e.clientX - dragStart.x) / scale
-      const dy = (e.clientY - dragStart.y) / scale
-      onDrag(room.id, room.position.x + dx, room.position.y + dy)
-      setDragStart({ x: e.clientX, y: e.clientY })
-    } else if (isResizing) {
-      const dx = (e.clientX - dragStart.x) / scale
-      const dy = (e.clientY - dragStart.y) / scale
-      onResize(room.id, room.dimensions.width + dx, room.dimensions.depth + dy)
-      setDragStart({ x: e.clientX, y: e.clientY })
-    }
-  }, [isDragging, isResizing, dragStart, room, scale, onDrag, onResize])
+  // Throttled mouse move handler for smooth drag/resize performance (16ms = 60fps)
+  const throttledMouseMove = useMemo(() =>
+    throttle((e) => {
+      if (isDragging) {
+        const dx = (e.clientX - dragStart.x) / scale
+        const dy = (e.clientY - dragStart.y) / scale
+        onDrag(room.id, room.position.x + dx, room.position.y + dy)
+        setDragStart({ x: e.clientX, y: e.clientY })
+      } else if (isResizing && resizeHandle) {
+        const dx = (e.clientX - dragStart.x) / scale
+        const dy = (e.clientY - dragStart.y) / scale
+        onResize(room.id, dx, dy, resizeHandle)
+        setDragStart({ x: e.clientX, y: e.clientY })
+      }
+    }, 16),
+    [isDragging, isResizing, resizeHandle, dragStart, room, scale, onDrag, onResize]
+  )
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false)
     setIsResizing(false)
+    setResizeHandle(null)
   }, [])
 
   useEffect(() => {
     if (isDragging || isResizing) {
-      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mousemove', throttledMouseMove)
       window.addEventListener('mouseup', handleMouseUp)
       return () => {
-        window.removeEventListener('mousemove', handleMouseMove)
+        window.removeEventListener('mousemove', throttledMouseMove)
         window.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [isDragging, isResizing, handleMouseMove, handleMouseUp])
+  }, [isDragging, isResizing, throttledMouseMove, handleMouseUp])
 
   const roomColor = ROOM_COLORS[room.room_type] || ROOM_COLORS.other
 
@@ -143,21 +235,23 @@ function Room({ room, scale, isSelected, onSelect, onDrag, onResize }) {
         {((room.dimensions.width * room.dimensions.depth) / 1000000).toFixed(1)} m²
       </text>
 
-      {/* Resize handle (bottom-right corner) */}
-      {isSelected && (
+      {/* 8-point resize handles */}
+      {isSelected && RESIZE_HANDLES.map(handle => (
         <rect
+          key={handle.id}
           className="resize-handle"
-          x={x + width - 10}
-          y={y + depth - 10}
-          width={12}
-          height={12}
+          data-handle={handle.id}
+          x={x + width * handle.x - 5}
+          y={y + depth * handle.y - 5}
+          width={10}
+          height={10}
           fill="#ffffff"
           stroke={roomColor}
           strokeWidth={2}
           rx={2}
-          style={{ cursor: 'se-resize' }}
+          style={{ cursor: handle.cursor }}
         />
-      )}
+      ))}
     </g>
   )
 }
@@ -283,53 +377,45 @@ function PropertiesPanel({ room, onUpdate }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">Width (mm)</label>
-          <input
-            type="number"
-            value={room.dimensions.width}
-            onChange={(e) => onUpdate(room.id, {
-              dimensions: { ...room.dimensions, width: parseFloat(e.target.value) || 0 }
-            })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">Depth (mm)</label>
-          <input
-            type="number"
-            value={room.dimensions.depth}
-            onChange={(e) => onUpdate(room.id, {
-              dimensions: { ...room.dimensions, depth: parseFloat(e.target.value) || 0 }
-            })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-          />
-        </div>
+        <ValidatedInput
+          label="Width (mm)"
+          value={room.dimensions.width}
+          min={DIMENSION_LIMITS.minWidth}
+          max={DIMENSION_LIMITS.maxWidth}
+          onChange={(value) => onUpdate(room.id, {
+            dimensions: { ...room.dimensions, width: value }
+          })}
+        />
+        <ValidatedInput
+          label="Depth (mm)"
+          value={room.dimensions.depth}
+          min={DIMENSION_LIMITS.minDepth}
+          max={DIMENSION_LIMITS.maxDepth}
+          onChange={(value) => onUpdate(room.id, {
+            dimensions: { ...room.dimensions, depth: value }
+          })}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">X Position</label>
-          <input
-            type="number"
-            value={room.position.x}
-            onChange={(e) => onUpdate(room.id, {
-              position: { ...room.position, x: parseFloat(e.target.value) || 0 }
-            })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">Y Position</label>
-          <input
-            type="number"
-            value={room.position.y}
-            onChange={(e) => onUpdate(room.id, {
-              position: { ...room.position, y: parseFloat(e.target.value) || 0 }
-            })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-          />
-        </div>
+        <ValidatedInput
+          label="X Position"
+          value={room.position.x}
+          min={DIMENSION_LIMITS.minPosition}
+          max={DIMENSION_LIMITS.maxPosition}
+          onChange={(value) => onUpdate(room.id, {
+            position: { ...room.position, x: value }
+          })}
+        />
+        <ValidatedInput
+          label="Y Position"
+          value={room.position.y}
+          min={DIMENSION_LIMITS.minPosition}
+          max={DIMENSION_LIMITS.maxPosition}
+          onChange={(value) => onUpdate(room.id, {
+            position: { ...room.position, y: value }
+          })}
+        />
       </div>
 
       <div className="pt-2 border-t border-slate-700">
@@ -368,14 +454,47 @@ export default function FloorPlanEditor() {
   // Generate unique ID
   const generateId = () => `room_${Date.now().toString(36)}`
 
+  // Find a position that doesn't overlap with existing rooms
+  const findNonOverlappingPosition = (existingRooms, newWidth, newDepth) => {
+    const maxWidth = floorPlan.overall_dimensions.width
+    const maxDepth = floorPlan.overall_dimensions.depth
+    const padding = gridSize
+
+    // Grid-based placement: try positions row by row
+    for (let y = padding; y < maxDepth - newDepth; y += gridSize * 2) {
+      for (let x = padding; x < maxWidth - newWidth; x += gridSize * 2) {
+        const candidate = { x, y }
+        const overlaps = existingRooms.some(room => {
+          return !(candidate.x + newWidth <= room.position.x ||
+                   candidate.x >= room.position.x + room.dimensions.width ||
+                   candidate.y + newDepth <= room.position.y ||
+                   candidate.y >= room.position.y + room.dimensions.depth)
+        })
+        if (!overlaps) return candidate
+      }
+    }
+
+    // Fallback: offset from last room
+    if (existingRooms.length > 0) {
+      const lastRoom = existingRooms[existingRooms.length - 1]
+      return {
+        x: Math.min(lastRoom.position.x + gridSize, maxWidth - newWidth - padding),
+        y: Math.min(lastRoom.position.y + gridSize, maxDepth - newDepth - padding)
+      }
+    }
+
+    return { x: padding, y: padding }
+  }
+
   // Add a new room
   const handleAddRoom = (roomType) => {
     const defaultSize = DEFAULT_ROOM_SIZES[roomType] || DEFAULT_ROOM_SIZES.other
+    const position = findNonOverlappingPosition(floorPlan.rooms, defaultSize.width, defaultSize.depth)
     const newRoom = {
       id: generateId(),
       name: `${roomType.charAt(0).toUpperCase() + roomType.slice(1)} ${floorPlan.rooms.length + 1}`,
       room_type: roomType,
-      position: { x: 1000, y: 1000 },
+      position: position,
       dimensions: { width: defaultSize.width, depth: defaultSize.depth, height: 2743 },
       walls: [],
       fixtures: [],
@@ -422,17 +541,98 @@ export default function FloorPlanEditor() {
     }))
   }
 
-  // Resize room
-  const handleResizeRoom = (roomId, newWidth, newDepth) => {
+  // Resize room with 8-directional handle support
+  const handleResizeRoom = (roomId, dx, dy, handleId) => {
+    const room = floorPlan.rooms.find(r => r.id === roomId)
+    if (!room) return
+
+    let newX = room.position.x
+    let newY = room.position.y
+    let newWidth = room.dimensions.width
+    let newDepth = room.dimensions.depth
+
+    // Calculate new dimensions based on which handle is being dragged
+    switch (handleId) {
+      case 'nw': // Top-left: adjust x, y, width, depth (bottom-right anchored)
+        newX = room.position.x + dx
+        newY = room.position.y + dy
+        newWidth = room.dimensions.width - dx
+        newDepth = room.dimensions.depth - dy
+        break
+      case 'n': // Top: adjust y and depth (bottom anchored)
+        newY = room.position.y + dy
+        newDepth = room.dimensions.depth - dy
+        break
+      case 'ne': // Top-right: adjust y, width, depth (bottom-left anchored)
+        newY = room.position.y + dy
+        newWidth = room.dimensions.width + dx
+        newDepth = room.dimensions.depth - dy
+        break
+      case 'e': // Right: adjust width (left anchored)
+        newWidth = room.dimensions.width + dx
+        break
+      case 'se': // Bottom-right: adjust width, depth (top-left anchored) - original behavior
+        newWidth = room.dimensions.width + dx
+        newDepth = room.dimensions.depth + dy
+        break
+      case 's': // Bottom: adjust depth (top anchored)
+        newDepth = room.dimensions.depth + dy
+        break
+      case 'sw': // Bottom-left: adjust x, width, depth (top-right anchored)
+        newX = room.position.x + dx
+        newWidth = room.dimensions.width - dx
+        newDepth = room.dimensions.depth + dy
+        break
+      case 'w': // Left: adjust x, width (right anchored)
+        newX = room.position.x + dx
+        newWidth = room.dimensions.width - dx
+        break
+      default:
+        return
+    }
+
+    // Enforce minimum size constraints using DIMENSION_LIMITS
+    const minSize = Math.max(gridSize, DIMENSION_LIMITS.minWidth)
+    if (newWidth < minSize) {
+      if (handleId.includes('w')) {
+        newX = room.position.x + room.dimensions.width - minSize
+      }
+      newWidth = minSize
+    }
+    if (newDepth < minSize) {
+      if (handleId.includes('n')) {
+        newY = room.position.y + room.dimensions.depth - minSize
+      }
+      newDepth = minSize
+    }
+
+    // Enforce maximum size constraints
+    if (newWidth > DIMENSION_LIMITS.maxWidth) {
+      newWidth = DIMENSION_LIMITS.maxWidth
+    }
+    if (newDepth > DIMENSION_LIMITS.maxDepth) {
+      newDepth = DIMENSION_LIMITS.maxDepth
+    }
+
     // Snap to grid
-    const snappedWidth = Math.max(gridSize, Math.round(newWidth / gridSize) * gridSize)
-    const snappedDepth = Math.max(gridSize, Math.round(newDepth / gridSize) * gridSize)
+    const snappedX = Math.round(newX / gridSize) * gridSize
+    const snappedY = Math.round(newY / gridSize) * gridSize
+    const snappedWidth = Math.max(minSize, Math.round(newWidth / gridSize) * gridSize)
+    const snappedDepth = Math.max(minSize, Math.round(newDepth / gridSize) * gridSize)
+
+    // Clamp position to bounds
+    const clampedX = Math.max(0, Math.min(snappedX, floorPlan.overall_dimensions.width - snappedWidth))
+    const clampedY = Math.max(0, Math.min(snappedY, floorPlan.overall_dimensions.depth - snappedDepth))
 
     setFloorPlan(prev => ({
       ...prev,
       rooms: prev.rooms.map(r =>
         r.id === roomId
-          ? { ...r, dimensions: { ...r.dimensions, width: snappedWidth, depth: snappedDepth } }
+          ? {
+              ...r,
+              position: { x: clampedX, y: clampedY },
+              dimensions: { ...r.dimensions, width: snappedWidth, depth: snappedDepth }
+            }
           : r
       )
     }))
@@ -591,7 +791,9 @@ export default function FloorPlanEditor() {
             <ul className="text-xs text-slate-400 space-y-1">
               <li>Click toolbar buttons to add rooms</li>
               <li>Drag rooms to reposition</li>
-              <li>Drag corner handle to resize</li>
+              <li>Drag any of the 8 handles to resize</li>
+              <li>Corner handles resize both dimensions</li>
+              <li>Edge handles resize one dimension</li>
               <li>Click room to select and edit properties</li>
               <li>Click background to deselect</li>
               <li>Export JSON for use with HVAC router</li>
