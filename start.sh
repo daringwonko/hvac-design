@@ -18,8 +18,8 @@ lsof -ti:3000 | xargs kill -9 2>/dev/null || true
 
 # Start backend
 echo "[2/4] Starting Flask backend on :5000..."
-cd engine
-python -m api.app &
+cd "$SCRIPT_DIR"
+python -m engine.api.app &
 BACKEND_PID=$!
 echo "       Backend PID: $BACKEND_PID"
 
@@ -40,7 +40,7 @@ done
 
 # Start frontend
 echo "[4/4] Starting Vite frontend on :3000..."
-cd frontend
+cd engine/frontend
 npm run dev &
 FRONTEND_PID=$!
 echo "       Frontend PID: $FRONTEND_PID"

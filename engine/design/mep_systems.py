@@ -21,9 +21,12 @@ from enum import Enum
 class HVACType(Enum):
     """HVAC system types"""
     SPLIT_SYSTEM = "split_system"
+    MINI_SPLIT = "mini_split"
     VRF = "vrf"
     CHILLED_WATER = "chilled_water"
     PACKAGE_UNIT = "package_unit"
+    DUCTED = "ducted"
+    RADIANT = "radiant"
 
 
 class ElectricalPhase(Enum):

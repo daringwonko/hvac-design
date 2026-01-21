@@ -24,7 +24,7 @@ from .config_manager import (
 
 from .logging_config import (
     get_logger,
-    setup_logging,
+    configure_logging,
     CeilingCalculatorError,
     ValidationError,
     ConfigurationError,
@@ -48,7 +48,7 @@ __all__ = [
     'CalculatorConfig',
     # Logging
     'get_logger',
-    'setup_logging',
+    'configure_logging',
     'CeilingCalculatorError',
     'ValidationError',
     'ConfigurationError',

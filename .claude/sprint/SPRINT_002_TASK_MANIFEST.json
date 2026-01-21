@@ -1,0 +1,720 @@
+{
+  "sprint_id": "SPRINT-002-LOADCALCULATION",
+  "title": "Unified Load Calculation Module Implementation",
+  "created_by": "Main Context (Claude)",
+  "created_at": "2026-01-21T17:00:00Z",
+  "branch": "claude/hvac-design-images-aXBTX",
+  "status": "PLANNING_COMPLETE",
+
+  "objective": "Implement the full LoadCalculationEngine as designed in LOAD_CALCULATION_DESIGN.md, integrating all 16 existing calculators into a unified, cross-disciplinary load analysis system with real-time warnings and quantum optimization.",
+
+  "success_criteria": [
+    "LoadCalculationEngine class fully implemented",
+    "All 16 existing calculators integrated",
+    "Cross-system load propagation working",
+    "Warning system surfaces alerts to API",
+    "Quantum optimization improves load distribution",
+    "API endpoints functional (/load/calculate-all, /load/warnings, etc.)",
+    "All imports resolve without error",
+    "Integration tests pass",
+    "Zero technical debt introduced",
+    "EPO Human Advocacy approval on all waves"
+  ],
+
+  "estimated_agents": {
+    "scouts": 8,
+    "fixers": 24,
+    "validators": 6,
+    "epo_advocacy": 6,
+    "git_commit": 6,
+    "orchestrator": 1,
+    "deployment_strategist": 1,
+    "total": 52
+  },
+
+  "waves": [
+    {
+      "wave_id": 1,
+      "name": "Foundation Analysis",
+      "description": "Scout existing calculators and engine integrations",
+      "phase": "ANALYSIS",
+      "depends_on": [],
+      "agents": {
+        "scouts": [
+          {
+            "scout_id": "SCOUT-001",
+            "target": "/home/user/hvac-design/engine/design/structural_engine.py",
+            "objective": "Analyze StructuralEngine API, identify integration points",
+            "context_estimate": "8K tokens"
+          },
+          {
+            "scout_id": "SCOUT-002",
+            "target": "/home/user/hvac-design/engine/design/mep_systems.py",
+            "objective": "Analyze MEPSystemEngine methods for HVAC/electrical/plumbing",
+            "context_estimate": "10K tokens"
+          },
+          {
+            "scout_id": "SCOUT-003",
+            "target": "/home/user/hvac-design/engine/design/multi_story.py",
+            "objective": "Analyze MultiStoryDesigner for floor/area data patterns",
+            "context_estimate": "8K tokens"
+          },
+          {
+            "scout_id": "SCOUT-004",
+            "target": "/home/user/hvac-design/engine/design/site_planner.py",
+            "objective": "Analyze SitePlanner for environmental constraints",
+            "context_estimate": "6K tokens"
+          },
+          {
+            "scout_id": "SCOUT-005",
+            "target": "/home/user/hvac-design/engine/design/quantum_optimizer.py",
+            "objective": "Analyze QuantumInspiredOptimizer API for integration",
+            "context_estimate": "8K tokens"
+          },
+          {
+            "scout_id": "SCOUT-006",
+            "target": "/home/user/hvac-design/engine/design/energy_optimization.py",
+            "objective": "Analyze EnergyOptimizationEngine patterns",
+            "context_estimate": "6K tokens"
+          },
+          {
+            "scout_id": "SCOUT-007",
+            "target": "/home/user/hvac-design/engine/core/ceiling_panel_calc.py",
+            "objective": "Analyze CeilingPanelCalculator MEP clearance requirements",
+            "context_estimate": "6K tokens"
+          },
+          {
+            "scout_id": "SCOUT-008",
+            "target": "/home/user/hvac-design/engine/__init__.py",
+            "objective": "Identify all exported calculators for integration",
+            "context_estimate": "5K tokens"
+          }
+        ],
+        "synthesizer": {
+          "synthesizer_id": "SYNTH-001",
+          "inputs": ["SCOUT-001", "SCOUT-002", "SCOUT-003", "SCOUT-004", "SCOUT-005", "SCOUT-006", "SCOUT-007", "SCOUT-008"],
+          "objective": "Compile integration map: which methods from each engine LoadCalculation will call",
+          "output": "INTEGRATION_MAP.json",
+          "context_estimate": "12K tokens"
+        }
+      },
+      "deliverables": [
+        "SCOUT_REPORTS/SCOUT-001.json through SCOUT-008.json",
+        "INTEGRATION_MAP.json"
+      ],
+      "validation": "Synthesizer produces complete integration map",
+      "total_context_estimate": "69K tokens (8 parallel scouts + 1 synthesizer)"
+    },
+    {
+      "wave_id": 2,
+      "name": "Core Implementation - Types & Foundation",
+      "description": "Create load_types.py and core LoadCalculationEngine structure",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [1],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-001",
+            "target": "/home/user/hvac-design/engine/design/load_types.py",
+            "objective": "Create all dataclasses: LoadResult, LoadWarning, LoadCategory enum, WarningSeverity enum",
+            "lines_estimate": 150,
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-002",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "objective": "Create LoadCalculationEngine class skeleton with __init__, primary API stubs",
+            "lines_estimate": 100,
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-003",
+            "target": "/home/user/hvac-design/engine/design/load_thresholds.py",
+            "objective": "Create threshold definitions and compliance rules",
+            "lines_estimate": 80,
+            "context_estimate": "6K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-001",
+          "commands": [
+            "python -c \"from engine.design.load_types import LoadResult, LoadWarning, LoadCategory\"",
+            "python -c \"from engine.design.load_calculation import LoadCalculationEngine\"",
+            "python -c \"from engine.design.load_thresholds import LoadThreshold\""
+          ],
+          "objective": "Verify all new modules import successfully",
+          "context_estimate": "5K tokens"
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-001",
+          "trigger": "wave_completion",
+          "review_scope": ["load_types.py", "load_calculation.py", "load_thresholds.py"],
+          "context_estimate": "4K tokens"
+        },
+        "git_commit": {
+          "commit_id": "GIT-001",
+          "files": ["engine/design/load_types.py", "engine/design/load_calculation.py", "engine/design/load_thresholds.py"],
+          "message_template": "[Wave 2] Core types and foundation for LoadCalculationEngine",
+          "context_estimate": "3K tokens"
+        }
+      },
+      "deliverables": [
+        "engine/design/load_types.py",
+        "engine/design/load_calculation.py",
+        "engine/design/load_thresholds.py"
+      ],
+      "validation": "All imports succeed",
+      "total_context_estimate": "34K tokens"
+    },
+    {
+      "wave_id": 3,
+      "name": "Structural & Thermal Load Methods",
+      "description": "Implement structural and thermal load calculation methods",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [2],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-004",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_calculate_structural_loads",
+            "objective": "Implement _calculate_structural_loads, _calculate_dead_load, _calculate_live_load",
+            "lines_estimate": 120,
+            "context_estimate": "10K tokens"
+          },
+          {
+            "fixer_id": "FIXER-005",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_calculate_environmental_loads",
+            "objective": "Implement wind, seismic, snow load calculations",
+            "lines_estimate": 100,
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-006",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_calculate_thermal_loads",
+            "objective": "Implement _calculate_thermal_loads, envelope, ventilation calculations",
+            "lines_estimate": 100,
+            "context_estimate": "10K tokens"
+          },
+          {
+            "fixer_id": "FIXER-007",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_calculate_internal_gains",
+            "objective": "Implement internal heat gains (people, lighting, equipment)",
+            "lines_estimate": 80,
+            "context_estimate": "8K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-002",
+          "commands": [
+            "python -c \"from engine.design.load_calculation import LoadCalculationEngine; e = LoadCalculationEngine(); print('Structural methods exist:', hasattr(e, '_calculate_structural_loads'))\""
+          ],
+          "objective": "Verify structural and thermal methods exist and are callable",
+          "context_estimate": "5K tokens"
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-002",
+          "trigger": "wave_completion",
+          "review_scope": ["load_calculation.py structural/thermal sections"],
+          "context_estimate": "4K tokens"
+        },
+        "git_commit": {
+          "commit_id": "GIT-002",
+          "files": ["engine/design/load_calculation.py"],
+          "message_template": "[Wave 3] Structural and thermal load calculation methods",
+          "context_estimate": "3K tokens"
+        }
+      },
+      "deliverables": [
+        "Structural load methods in load_calculation.py",
+        "Thermal load methods in load_calculation.py"
+      ],
+      "validation": "Methods exist and are type-correct",
+      "total_context_estimate": "48K tokens"
+    },
+    {
+      "wave_id": 4,
+      "name": "Electrical & Plumbing Load Methods",
+      "description": "Implement electrical and plumbing load calculation methods",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [3],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-008",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_calculate_electrical_loads",
+            "objective": "Implement _calculate_electrical_loads, lighting, receptacle, motor loads",
+            "lines_estimate": 100,
+            "context_estimate": "10K tokens"
+          },
+          {
+            "fixer_id": "FIXER-009",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_calculate_hvac_electrical_load",
+            "objective": "Implement HVAC electrical load calculations with COP factors",
+            "lines_estimate": 60,
+            "context_estimate": "6K tokens"
+          },
+          {
+            "fixer_id": "FIXER-010",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_calculate_plumbing_loads",
+            "objective": "Implement water supply, hot water, drainage, pump calculations",
+            "lines_estimate": 100,
+            "context_estimate": "10K tokens"
+          },
+          {
+            "fixer_id": "FIXER-011",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_calculate_pump_requirements",
+            "objective": "Implement pump sizing and electrical requirements",
+            "lines_estimate": 50,
+            "context_estimate": "6K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-003",
+          "commands": [
+            "python -c \"from engine.design.load_calculation import LoadCalculationEngine; e = LoadCalculationEngine(); print('Electrical:', hasattr(e, '_calculate_electrical_loads')); print('Plumbing:', hasattr(e, '_calculate_plumbing_loads'))\""
+          ],
+          "objective": "Verify electrical and plumbing methods exist",
+          "context_estimate": "5K tokens"
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-003",
+          "trigger": "wave_completion",
+          "review_scope": ["load_calculation.py electrical/plumbing sections"],
+          "context_estimate": "4K tokens"
+        },
+        "git_commit": {
+          "commit_id": "GIT-003",
+          "files": ["engine/design/load_calculation.py"],
+          "message_template": "[Wave 4] Electrical and plumbing load calculation methods",
+          "context_estimate": "3K tokens"
+        }
+      },
+      "deliverables": [
+        "Electrical load methods in load_calculation.py",
+        "Plumbing load methods in load_calculation.py"
+      ],
+      "validation": "Methods exist and are callable",
+      "total_context_estimate": "44K tokens"
+    },
+    {
+      "wave_id": 5,
+      "name": "Cross-System Propagation & Warning System",
+      "description": "Implement load propagation and warning/threshold system",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [4],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-012",
+            "target": "/home/user/hvac-design/engine/design/load_propagation.py",
+            "objective": "Create load_propagation.py with dependency graph and cascade logic",
+            "lines_estimate": 150,
+            "context_estimate": "12K tokens"
+          },
+          {
+            "fixer_id": "FIXER-013",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_propagate_load_impacts",
+            "objective": "Implement _propagate_load_impacts, topological sort, cascade",
+            "lines_estimate": 80,
+            "context_estimate": "10K tokens"
+          },
+          {
+            "fixer_id": "FIXER-014",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_check_thresholds_and_compliance",
+            "objective": "Implement threshold checking and warning emission",
+            "lines_estimate": 80,
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-015",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_emit_warning",
+            "objective": "Implement warning emission with callbacks",
+            "lines_estimate": 40,
+            "context_estimate": "5K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-004",
+          "commands": [
+            "python -c \"from engine.design.load_propagation import LoadPropagationGraph\"",
+            "python -c \"from engine.design.load_calculation import LoadCalculationEngine; e = LoadCalculationEngine(); print('Warning system:', hasattr(e, '_emit_warning'))\""
+          ],
+          "objective": "Verify propagation and warning systems work",
+          "context_estimate": "5K tokens"
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-004",
+          "trigger": "wave_completion",
+          "review_scope": ["load_propagation.py", "warning system"],
+          "questions": [
+            "Does warning system provide actionable feedback to users?",
+            "Is the impact chain traceable for debugging?"
+          ],
+          "context_estimate": "5K tokens"
+        },
+        "git_commit": {
+          "commit_id": "GIT-004",
+          "files": ["engine/design/load_propagation.py", "engine/design/load_calculation.py"],
+          "message_template": "[Wave 5] Cross-system load propagation and warning system",
+          "context_estimate": "3K tokens"
+        }
+      },
+      "deliverables": [
+        "engine/design/load_propagation.py",
+        "Warning system in load_calculation.py"
+      ],
+      "validation": "Propagation and warnings functional",
+      "total_context_estimate": "48K tokens"
+    },
+    {
+      "wave_id": 6,
+      "name": "Quantum Optimization Integration",
+      "description": "Integrate QuantumInspiredOptimizer for load balancing",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [5],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-016",
+            "target": "/home/user/hvac-design/engine/design/load_optimization.py",
+            "objective": "Create load_optimization.py with optimization wrapper",
+            "lines_estimate": 80,
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-017",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "_optimize_load_distribution",
+            "objective": "Implement multi-objective optimization with fitness function",
+            "lines_estimate": 80,
+            "context_estimate": "10K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-005",
+          "commands": [
+            "python -c \"from engine.design.load_optimization import LoadOptimizer\"",
+            "python -c \"from engine.design.load_calculation import LoadCalculationEngine; e = LoadCalculationEngine(); print('Optimize:', hasattr(e, '_optimize_load_distribution'))\""
+          ],
+          "objective": "Verify optimization integration works",
+          "context_estimate": "5K tokens"
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-005",
+          "trigger": "wave_completion",
+          "review_scope": ["load_optimization.py", "optimization integration"],
+          "questions": [
+            "Does optimization improve user outcomes?",
+            "Are optimization results explainable to users?"
+          ],
+          "context_estimate": "4K tokens"
+        },
+        "git_commit": {
+          "commit_id": "GIT-005",
+          "files": ["engine/design/load_optimization.py", "engine/design/load_calculation.py"],
+          "message_template": "[Wave 6] Quantum-inspired optimization integration",
+          "context_estimate": "3K tokens"
+        }
+      },
+      "deliverables": [
+        "engine/design/load_optimization.py",
+        "Optimization methods in load_calculation.py"
+      ],
+      "validation": "Optimization runs without error",
+      "total_context_estimate": "30K tokens"
+    },
+    {
+      "wave_id": 7,
+      "name": "Reporting & UI Data Methods",
+      "description": "Implement reporting and UI dashboard data methods",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [6],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-018",
+            "target": "/home/user/hvac-design/engine/design/load_reporting.py",
+            "objective": "Create load_reporting.py with report generation helpers",
+            "lines_estimate": 100,
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-019",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "generate_load_schedule_report",
+            "objective": "Implement comprehensive report generation",
+            "lines_estimate": 60,
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-020",
+            "target": "/home/user/hvac-design/engine/design/load_calculation.py",
+            "section": "get_ui_dashboard_data",
+            "objective": "Implement UI dashboard data formatting",
+            "lines_estimate": 50,
+            "context_estimate": "6K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-006",
+          "commands": [
+            "python -c \"from engine.design.load_reporting import LoadReportGenerator\"",
+            "python -c \"from engine.design.load_calculation import LoadCalculationEngine; e = LoadCalculationEngine(); print('Report:', hasattr(e, 'generate_load_schedule_report')); print('Dashboard:', hasattr(e, 'get_ui_dashboard_data'))\""
+          ],
+          "objective": "Verify reporting methods exist",
+          "context_estimate": "5K tokens"
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-006",
+          "trigger": "wave_completion",
+          "review_scope": ["load_reporting.py", "UI data methods"],
+          "questions": [
+            "Is the dashboard data actionable for engineers?",
+            "Are warnings clearly prioritized for users?"
+          ],
+          "context_estimate": "4K tokens"
+        },
+        "git_commit": {
+          "commit_id": "GIT-006",
+          "files": ["engine/design/load_reporting.py", "engine/design/load_calculation.py"],
+          "message_template": "[Wave 7] Reporting and UI dashboard data methods",
+          "context_estimate": "3K tokens"
+        }
+      },
+      "deliverables": [
+        "engine/design/load_reporting.py",
+        "Reporting methods in load_calculation.py"
+      ],
+      "validation": "Reporting methods functional",
+      "total_context_estimate": "34K tokens"
+    },
+    {
+      "wave_id": 8,
+      "name": "API Endpoints",
+      "description": "Create Flask routes for load calculation API",
+      "phase": "INTEGRATION",
+      "depends_on": [7],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-021",
+            "target": "/home/user/hvac-design/engine/api/routes/load.py",
+            "objective": "Create load.py blueprint with all endpoints",
+            "lines_estimate": 150,
+            "context_estimate": "12K tokens"
+          },
+          {
+            "fixer_id": "FIXER-022",
+            "target": "/home/user/hvac-design/engine/api/app.py",
+            "objective": "Register load_bp blueprint in create_app()",
+            "lines_estimate": 10,
+            "context_estimate": "6K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-007",
+          "commands": [
+            "python -c \"from engine.api.routes.load import load_bp; print('Blueprint created')\"",
+            "python -c \"from engine.api.app import create_app; app = create_app(); print('App created')\""
+          ],
+          "objective": "Verify API routes register correctly",
+          "context_estimate": "5K tokens"
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-007",
+          "trigger": "wave_completion",
+          "review_scope": ["load.py API", "app.py integration"],
+          "questions": [
+            "Are all documented endpoints implemented?",
+            "Is error handling user-friendly?"
+          ],
+          "context_estimate": "4K tokens"
+        },
+        "git_commit": {
+          "commit_id": "GIT-007",
+          "files": ["engine/api/routes/load.py", "engine/api/app.py"],
+          "message_template": "[Wave 8] Load calculation API endpoints",
+          "context_estimate": "3K tokens"
+        }
+      },
+      "deliverables": [
+        "engine/api/routes/load.py",
+        "Blueprint registered in app.py"
+      ],
+      "validation": "API endpoints respond correctly",
+      "total_context_estimate": "30K tokens"
+    },
+    {
+      "wave_id": 9,
+      "name": "Module Exports & Integration",
+      "description": "Update __init__.py files and verify full integration",
+      "phase": "INTEGRATION",
+      "depends_on": [8],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-023",
+            "target": "/home/user/hvac-design/engine/design/__init__.py",
+            "objective": "Export LoadCalculationEngine and related classes",
+            "lines_estimate": 20,
+            "context_estimate": "5K tokens"
+          },
+          {
+            "fixer_id": "FIXER-024",
+            "target": "/home/user/hvac-design/engine/__init__.py",
+            "objective": "Add LoadCalculationEngine to top-level exports",
+            "lines_estimate": 10,
+            "context_estimate": "5K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-008",
+          "commands": [
+            "python -c \"from engine import LoadCalculationEngine; print('Top-level import works')\"",
+            "python -c \"from engine.design import LoadCalculationEngine, LoadResult, LoadWarning; print('All design exports work')\""
+          ],
+          "objective": "Verify all exports resolve",
+          "context_estimate": "5K tokens"
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-008",
+          "trigger": "wave_completion",
+          "review_scope": ["All __init__.py exports"],
+          "questions": [
+            "Can users easily import what they need?",
+            "Is the API surface intuitive?"
+          ],
+          "context_estimate": "3K tokens"
+        },
+        "git_commit": {
+          "commit_id": "GIT-008",
+          "files": ["engine/design/__init__.py", "engine/__init__.py"],
+          "message_template": "[Wave 9] Module exports and integration",
+          "context_estimate": "3K tokens"
+        }
+      },
+      "deliverables": [
+        "Updated engine/design/__init__.py",
+        "Updated engine/__init__.py"
+      ],
+      "validation": "All imports work from any level",
+      "total_context_estimate": "21K tokens"
+    },
+    {
+      "wave_id": 10,
+      "name": "Final Validation & Documentation",
+      "description": "Comprehensive testing and code documentation",
+      "phase": "VALIDATION",
+      "depends_on": [9],
+      "agents": {
+        "validators": [
+          {
+            "validator_id": "VAL-009",
+            "objective": "Full import chain verification",
+            "commands": [
+              "cd /home/user/hvac-design && python -c \"from engine.api.app import create_app; app = create_app(); print('SUCCESS')\"",
+              "cd /home/user/hvac-design && python -c \"from engine import LoadCalculationEngine; e = LoadCalculationEngine(); print('Engine instantiates')\""
+            ],
+            "context_estimate": "5K tokens"
+          },
+          {
+            "validator_id": "VAL-010",
+            "objective": "API endpoint testing",
+            "commands": [
+              "curl -X POST http://localhost:5000/api/load/calculate-all -H 'Content-Type: application/json' -d '{}'",
+              "curl http://localhost:5000/api/load/dashboard"
+            ],
+            "context_estimate": "5K tokens"
+          },
+          {
+            "validator_id": "VAL-011",
+            "objective": "Startup test",
+            "commands": [
+              "cd /home/user/hvac-design && ./start.sh &",
+              "sleep 5 && curl http://localhost:5000/api/health"
+            ],
+            "context_estimate": "5K tokens"
+          }
+        ],
+        "epo_advocacy": {
+          "advocacy_id": "ADV-FINAL",
+          "trigger": "pre_merge",
+          "review_scope": ["Entire LoadCalculation implementation"],
+          "analysis": [
+            "USER_IMPACT: Does this feature serve EPO engineers as intended?",
+            "TECH_DEBT: Is any technical debt introduced?",
+            "COMPLETENESS: Are all design spec requirements met?",
+            "USER_DELIGHT: Will power users be satisfied?"
+          ],
+          "veto_authority": true,
+          "context_estimate": "8K tokens"
+        },
+        "git_commit": {
+          "commit_id": "GIT-FINAL",
+          "files": "All modified files",
+          "message_template": "[Sprint 002 Complete] LoadCalculation module fully implemented",
+          "context_estimate": "3K tokens"
+        }
+      },
+      "deliverables": [
+        "All tests passing",
+        "App starts successfully",
+        "EPO Advocacy approval"
+      ],
+      "validation": "Sprint complete",
+      "total_context_estimate": "26K tokens"
+    }
+  ],
+
+  "total_estimated_context": {
+    "wave_1": "69K tokens",
+    "wave_2": "34K tokens",
+    "wave_3": "48K tokens",
+    "wave_4": "44K tokens",
+    "wave_5": "48K tokens",
+    "wave_6": "30K tokens",
+    "wave_7": "34K tokens",
+    "wave_8": "30K tokens",
+    "wave_9": "21K tokens",
+    "wave_10": "26K tokens",
+    "total": "384K tokens across 52 agents"
+  },
+
+  "files_to_create": [
+    "engine/design/load_types.py",
+    "engine/design/load_calculation.py",
+    "engine/design/load_propagation.py",
+    "engine/design/load_thresholds.py",
+    "engine/design/load_optimization.py",
+    "engine/design/load_reporting.py",
+    "engine/api/routes/load.py"
+  ],
+
+  "files_to_modify": [
+    "engine/design/__init__.py",
+    "engine/__init__.py",
+    "engine/api/app.py"
+  ],
+
+  "orchestrator_instructions": {
+    "entry_point": "Wave 1",
+    "exit_condition": "<promise>SPRINT_COMPLETE</promise>",
+    "checkpoint_frequency": "After each wave",
+    "escalation_threshold": 2,
+    "git_commit_trigger": "After each successful wave validation"
+  },
+
+  "leadership_approval_required": true,
+  "approval_request": "Please review this Sprint 002 plan. Reply with 'APPROVED' to begin execution, or provide feedback for adjustments."
+}

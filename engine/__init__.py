@@ -21,7 +21,7 @@ __version__ = "2.0.0"
 __author__ = "Ceiling Panel Calculator Team"
 
 # Convenience imports for common use cases
-from core import (
+from .core import (
     CeilingPanelCalculator,
     CeilingDimensions,
     PanelSpacing,
@@ -30,12 +30,34 @@ from core import (
     MATERIALS,
 )
 
+# Load Calculation Module (Sprint 002)
+from .design import (
+    LoadCalculationEngine,
+    BuildingSpecification,
+    LoadResult,
+    LoadWarning,
+    LoadCategory,
+    WarningSeverity,
+    ThresholdChecker,
+    get_default_thresholds,
+)
+
 __all__ = [
     '__version__',
+    # Core
     'CeilingPanelCalculator',
     'CeilingDimensions',
     'PanelSpacing',
     'Material',
     'PanelLayout',
     'MATERIALS',
+    # Load Calculation (Sprint 002)
+    'LoadCalculationEngine',
+    'BuildingSpecification',
+    'LoadResult',
+    'LoadWarning',
+    'LoadCategory',
+    'WarningSeverity',
+    'ThresholdChecker',
+    'get_default_thresholds',
 ]

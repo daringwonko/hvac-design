@@ -2,6 +2,7 @@
 Project management endpoints for the API.
 """
 
+import json
 import os
 import uuid
 from datetime import datetime
@@ -10,8 +11,15 @@ from flask import Blueprint, request, jsonify, g
 from ..middleware.auth import require_auth
 from ..middleware.rate_limit import rate_limit
 
-# Import SQLite database - use relative import to avoid triggering engine/__init__.py
-from ...core.project_database import ProjectDatabase
+# Import SQLite database
+try:
+    from ...core.project_database import ProjectDatabase
+    DB_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logging.warning(f"ProjectDatabase not available: {e}")
+    DB_AVAILABLE = False
+    ProjectDatabase = None
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/api/v1')
 
@@ -95,7 +103,6 @@ def create_project():
         )
 
         # Update with additional fields via metadata
-        import json
         metadata = json.dumps({
             'dimensions': data['dimensions'],
             'spacing': data.get('spacing', {'perimeter_gap_mm': 200, 'panel_gap_mm': 50}),
@@ -160,7 +167,6 @@ def list_projects():
       200:
         description: List of projects
     """
-    import json
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     search = request.args.get('search', '')
@@ -229,7 +235,6 @@ def get_project(project_id: str):
       404:
         description: Project not found
     """
-    import json
     project = _db.get_project(project_id)
 
     if project is None:
@@ -284,7 +289,6 @@ def update_project(project_id: str):
       404:
         description: Project not found
     """
-    import json
     project = _db.get_project(project_id)
 
     if project is None:
@@ -415,7 +419,6 @@ def calculate_project(project_id: str):
       404:
         description: Project not found
     """
-    import json
     project = _db.get_project(project_id)
 
     if project is None:

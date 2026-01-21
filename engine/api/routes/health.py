@@ -56,7 +56,7 @@ def readiness_check():
     """
     # Check if core services are available
     try:
-        from core.ceiling_panel_calc import CeilingPanelCalculator
+        from ...core.ceiling_panel_calc import CeilingPanelCalculator
         calculator_ready = True
     except ImportError:
         calculator_ready = False

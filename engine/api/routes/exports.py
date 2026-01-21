@@ -12,12 +12,9 @@ from ..middleware.rate_limit import rate_limit
 
 exports_bp = Blueprint('exports', __name__, url_prefix='/api/v1')
 
-# Import generators
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
+# Import generators using relative imports
 try:
-    from core.ceiling_panel_calc import (
+    from ...core.ceiling_panel_calc import (
         CeilingDimensions,
         PanelSpacing,
         CeilingPanelCalculator,
@@ -31,7 +28,7 @@ except ImportError:
     GENERATORS_AVAILABLE = False
 
 try:
-    from output.renderer_3d import (
+    from ...output.renderer_3d import (
         CeilingPanel3DGenerator,
         MeshExporter,
     )
