@@ -9,6 +9,9 @@ import Monitoring from './components/Monitoring/Monitoring'
 import Materials from './components/Materials'
 import Exports from './components/Exports'
 import FloorPlanEditor from './components/FloorPlanEditor'
+import HVACRouter from './components/HVACRouter'
+import ElectricalRouter from './components/ElectricalRouter'
+import PlumbingRouter from './components/PlumbingRouter'
 
 function App() {
   return (
@@ -24,6 +27,9 @@ function App() {
           <Route path="materials" element={<Materials />} />
           <Route path="exports" element={<Exports />} />
           <Route path="floor-plan" element={<FloorPlanEditor />} />
+          <Route path="hvac" element={<HVACRouter />} />
+          <Route path="electrical" element={<ElectricalRouter />} />
+          <Route path="plumbing" element={<PlumbingRouter />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
