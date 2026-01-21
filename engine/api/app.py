@@ -62,6 +62,7 @@ def create_app(config: dict = None) -> Flask:
     from .routes.electrical import electrical_bp
     from .routes.plumbing import plumbing_bp
     from .routes.load import load_bp
+    from .routes.imports import imports_bp
 
     app.register_blueprint(calculations_bp)
     app.register_blueprint(projects_bp)
@@ -73,6 +74,7 @@ def create_app(config: dict = None) -> Flask:
     app.register_blueprint(electrical_bp)
     app.register_blueprint(plumbing_bp)
     app.register_blueprint(load_bp)
+    app.register_blueprint(imports_bp)
 
     # Request logging middleware
     @app.before_request
@@ -223,6 +225,11 @@ def create_app(config: dict = None) -> Flask:
                         "POST /api/v1/exports/3d": "Generate 3D model",
                         "GET /api/v1/exports/{id}": "Get export info",
                         "GET /api/v1/exports/download/{id}": "Download file"
+                    },
+                    "imports": {
+                        "POST /api/v1/imports/dxf": "Import DXF floor plan",
+                        "GET /api/v1/imports/formats": "List supported formats",
+                        "POST /api/v1/imports/preview": "Preview import file"
                     },
                     "system": {
                         "GET /api/v1/health": "Health check",
