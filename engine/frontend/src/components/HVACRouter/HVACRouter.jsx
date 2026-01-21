@@ -305,7 +305,7 @@ function PropertiesPanel({ selectedItem, equipment, ducts, onUpdate, onDelete, c
   )
 }
 
-function Toolbar({ tool, setTool, systemType, setSystemType, onCalculate, onExport }) {
+function Toolbar({ tool, setTool, systemType, setSystemType, onCalculate, onExport, onAutoDesign, isLoading }) {
   return (
     <div className="flex items-center gap-2 p-2 bg-slate-800 rounded-lg">
       {/* Tool buttons - SketchUp style */}
@@ -356,6 +356,14 @@ function Toolbar({ tool, setTool, systemType, setSystemType, onCalculate, onExpo
       {/* Actions */}
       <div className="flex gap-1 ml-auto">
         <button
+          onClick={onAutoDesign}
+          disabled={isLoading}
+          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-wait text-white text-xs rounded flex items-center gap-1"
+          title="Auto-design HVAC system using AI"
+        >
+          <span>{isLoading ? '...' : '🤖'}</span> Auto-Design
+        </button>
+        <button
           onClick={onCalculate}
           className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs rounded flex items-center gap-1"
         >
@@ -402,6 +410,7 @@ export default function HVACRouter({ floorPlan, onSave }) {
   const [calculations, setCalculations] = useState(null)
   const [isDrawingDuct, setIsDrawingDuct] = useState(false)
   const [ductStart, setDuctStart] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   const svgRef = useRef(null)
 
@@ -554,6 +563,85 @@ export default function HVACRouter({ floorPlan, onSave }) {
     URL.revokeObjectURL(url)
   }
 
+  // Auto-design using MEPSystemEngine API
+  const handleAutoDesign = async () => {
+    setIsLoading(true)
+    try {
+      // Prepare rooms data from floor plan
+      const roomsData = plan.rooms.map(room => ({
+        name: room.name,
+        width: room.dimensions.width,
+        height: room.dimensions.depth,
+        x: room.position.x,
+        y: room.position.y,
+        occupancy: 2,
+        has_window: true
+      }))
+
+      const response = await fetch('/api/hvac/auto-design', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rooms: roomsData,
+          systemType: systemType
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        // Add equipment from API response
+        if (result.data.equipment && result.data.equipment.length > 0) {
+          const newEquipment = result.data.equipment.map((eq, idx) => ({
+            id: generateId(),
+            type: eq.type || 'mini_split_indoor',
+            position: { x: eq.x || 100 + idx * 150, y: eq.y || 100 + idx * 100 },
+            specs: {
+              btu: eq.capacity ? eq.capacity * 3412 : 12000,
+              cfm: eq.airflow || 100
+            },
+            label: eq.label
+          }))
+          setEquipment(prev => [...prev, ...newEquipment])
+        }
+
+        // Add ducts from API response
+        if (result.data.ducts && result.data.ducts.length > 0) {
+          const newDucts = result.data.ducts.map(d => ({
+            id: generateId(),
+            start: { x: d.startX, y: d.startY },
+            end: { x: d.endX, y: d.endY },
+            width: d.size?.width || 200,
+            type: d.type || 'supply'
+          }))
+          setDucts(prev => [...prev, ...newDucts])
+        }
+
+        // Update calculations from design
+        if (result.data.design) {
+          setCalculations({
+            cooling: result.data.design.cooling_capacity,
+            heating: result.data.design.heating_capacity,
+            airflow: result.data.design.airflow,
+            cost: result.data.design.cost,
+            efficiency: result.data.design.energy_efficiency,
+            totalArea: plan.rooms.reduce((sum, r) => sum + (r.dimensions.width * r.dimensions.depth / 1000000), 0)
+          })
+        }
+
+        console.log('HVAC auto-design complete:', result.data)
+      } else {
+        console.error('Auto-design failed:', result.error)
+        alert('Auto-design failed: ' + (result.error?.message || 'Unknown error'))
+      }
+    } catch (err) {
+      console.error('Auto-design API error:', err)
+      alert('Failed to connect to API. Make sure the backend is running.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -590,6 +678,8 @@ export default function HVACRouter({ floorPlan, onSave }) {
         setSystemType={setSystemType}
         onCalculate={handleCalculate}
         onExport={handleExport}
+        onAutoDesign={handleAutoDesign}
+        isLoading={isLoading}
       />
 
       {/* Main content - SketchUp layout: palette left, canvas center, properties right */}

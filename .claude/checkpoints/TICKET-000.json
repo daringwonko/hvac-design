@@ -1,0 +1,10 @@
+{
+  "ticket_id": "TICKET-000",
+  "timestamp": "2026-01-21T13:16:00Z",
+  "status": "COMPLETE",
+  "files_created": ["/home/user/hvac-design/start.sh"],
+  "files_modified": [],
+  "verification_result": "PASS",
+  "verification_evidence": "-rwxr-xr-x 1 root root 1740 Jan 21 13:16 /home/user/hvac-design/start.sh",
+  "integration_points": []
+}

@@ -1,0 +1,27 @@
+{
+  "ticket_id": "TICKET-002",
+  "timestamp": "2026-01-21T13:30:00Z",
+  "status": "COMPLETE",
+  "files_created": ["/home/user/hvac-design/engine/api/routes/hvac.py"],
+  "files_modified": [
+    "/home/user/hvac-design/engine/api/app.py",
+    "/home/user/hvac-design/engine/frontend/src/components/HVACRouter/HVACRouter.jsx"
+  ],
+  "verification_result": "PASS",
+  "integration_points": [
+    {"from": "app.py:61", "to": "hvac.py:19", "type": "blueprint_import"},
+    {"from": "app.py:69", "to": "hvac.py:19", "type": "blueprint_registration"},
+    {"from": "HVACRouter.jsx:581", "to": "hvac.py:68", "type": "api_call"},
+    {"from": "hvac.py:100", "to": "mep_systems.py:123", "type": "engine_invocation"}
+  ],
+  "endpoints_created": [
+    "POST /api/hvac/auto-design",
+    "POST /api/hvac/calculate-load",
+    "POST /api/hvac/validate"
+  ],
+  "frontend_changes": [
+    "Added isLoading state",
+    "Added handleAutoDesign function with API call",
+    "Added Auto-Design button to Toolbar"
+  ]
+}

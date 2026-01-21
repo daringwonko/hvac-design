@@ -2,6 +2,7 @@
 Project management endpoints for the API.
 """
 
+import os
 import uuid
 from datetime import datetime
 from flask import Blueprint, request, jsonify, g
@@ -9,10 +10,17 @@ from flask import Blueprint, request, jsonify, g
 from ..middleware.auth import require_auth
 from ..middleware.rate_limit import rate_limit
 
+# Import SQLite database
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+from engine.core.project_database import ProjectDatabase
+
 projects_bp = Blueprint('projects', __name__, url_prefix='/api/v1')
 
-# In-memory storage (replace with database in production)
-_projects_store = {}
+# Initialize SQLite database
+_db_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'mep_projects.db')
+os.makedirs(os.path.dirname(_db_path), exist_ok=True)
+_db = ProjectDatabase(_db_path)
 
 
 @projects_bp.route('/projects', methods=['POST'])
@@ -82,22 +90,32 @@ def create_project():
         else:
             owner_id = "anonymous"
 
-        project = {
-            'id': project_id,
-            'name': data['name'],
-            'description': data.get('description'),
-            'created_at': now.isoformat(),
-            'updated_at': now.isoformat(),
+        # Use SQLite database
+        project_id = _db.create_project(
+            name=data['name'],
+            description=data.get('description', '')
+        )
+
+        # Update with additional fields via metadata
+        import json
+        metadata = json.dumps({
             'dimensions': data['dimensions'],
             'spacing': data.get('spacing', {'perimeter_gap_mm': 200, 'panel_gap_mm': 50}),
             'material_id': data.get('material_id'),
             'calculation_id': None,
             'tags': data.get('tags', []),
-            'metadata': data.get('metadata', {}),
             'owner_id': owner_id
-        }
+        })
+        _db.update_project(project_id, {'metadata': metadata})
 
-        _projects_store[project_id] = project
+        project = _db.get_project(project_id)
+        # Expand metadata for response
+        if project and project.get('metadata'):
+            try:
+                meta = json.loads(project['metadata'])
+                project.update(meta)
+            except:
+                pass
 
         return jsonify({
             "success": True,
@@ -144,12 +162,24 @@ def list_projects():
       200:
         description: List of projects
     """
+    import json
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     search = request.args.get('search', '')
 
-    # Filter projects
-    projects = list(_projects_store.values())
+    # Get projects from SQLite database
+    all_projects = _db.list_projects()
+
+    # Expand metadata for each project
+    projects = []
+    for p in all_projects:
+        if p.get('metadata'):
+            try:
+                meta = json.loads(p['metadata'])
+                p.update(meta)
+            except:
+                pass
+        projects.append(p)
 
     if search:
         search_lower = search.lower()
@@ -159,8 +189,7 @@ def list_projects():
                (p.get('description') and search_lower in p['description'].lower())
         ]
 
-    # Sort by updated_at descending
-    projects.sort(key=lambda x: x['updated_at'], reverse=True)
+    # Already sorted by updated_at DESC from database
 
     # Paginate
     total = len(projects)
@@ -202,7 +231,8 @@ def get_project(project_id: str):
       404:
         description: Project not found
     """
-    project = _projects_store.get(project_id)
+    import json
+    project = _db.get_project(project_id)
 
     if project is None:
         return jsonify({
@@ -213,6 +243,14 @@ def get_project(project_id: str):
                 "message": f"Project {project_id} not found"
             }
         }), 404
+
+    # Expand metadata for response
+    if project.get('metadata'):
+        try:
+            meta = json.loads(project['metadata'])
+            project.update(meta)
+        except:
+            pass
 
     return jsonify({
         "success": True,
@@ -248,7 +286,8 @@ def update_project(project_id: str):
       404:
         description: Project not found
     """
-    project = _projects_store.get(project_id)
+    import json
+    project = _db.get_project(project_id)
 
     if project is None:
         return jsonify({
@@ -271,23 +310,43 @@ def update_project(project_id: str):
             }
         }), 400
 
-    # Update fields
-    if 'name' in data:
-        project['name'] = data['name']
-    if 'description' in data:
-        project['description'] = data['description']
-    if 'dimensions' in data:
-        project['dimensions'] = data['dimensions']
-    if 'spacing' in data:
-        project['spacing'] = data['spacing']
-    if 'material_id' in data:
-        project['material_id'] = data['material_id']
-    if 'tags' in data:
-        project['tags'] = data['tags']
-    if 'metadata' in data:
-        project['metadata'] = data['metadata']
+    # Parse existing metadata
+    existing_meta = {}
+    if project.get('metadata'):
+        try:
+            existing_meta = json.loads(project['metadata'])
+        except:
+            pass
 
-    project['updated_at'] = datetime.utcnow().isoformat()
+    # Build updates
+    updates = {}
+    if 'name' in data:
+        updates['name'] = data['name']
+    if 'description' in data:
+        updates['description'] = data['description']
+
+    # Update metadata fields
+    if 'dimensions' in data:
+        existing_meta['dimensions'] = data['dimensions']
+    if 'spacing' in data:
+        existing_meta['spacing'] = data['spacing']
+    if 'material_id' in data:
+        existing_meta['material_id'] = data['material_id']
+    if 'tags' in data:
+        existing_meta['tags'] = data['tags']
+
+    updates['metadata'] = json.dumps(existing_meta)
+
+    _db.update_project(project_id, updates)
+
+    # Fetch updated project
+    project = _db.get_project(project_id)
+    if project.get('metadata'):
+        try:
+            meta = json.loads(project['metadata'])
+            project.update(meta)
+        except:
+            pass
 
     return jsonify({
         "success": True,
@@ -317,7 +376,8 @@ def delete_project(project_id: str):
       404:
         description: Project not found
     """
-    if project_id not in _projects_store:
+    project = _db.get_project(project_id)
+    if project is None:
         return jsonify({
             "success": False,
             "data": None,
@@ -327,7 +387,7 @@ def delete_project(project_id: str):
             }
         }), 404
 
-    del _projects_store[project_id]
+    _db.delete_project(project_id)
 
     return jsonify({
         "success": True,
@@ -357,7 +417,8 @@ def calculate_project(project_id: str):
       404:
         description: Project not found
     """
-    project = _projects_store.get(project_id)
+    import json
+    project = _db.get_project(project_id)
 
     if project is None:
         return jsonify({
@@ -369,20 +430,28 @@ def calculate_project(project_id: str):
             }
         }), 404
 
+    # Parse metadata to get dimensions
+    meta = {}
+    if project.get('metadata'):
+        try:
+            meta = json.loads(project['metadata'])
+        except:
+            pass
+
     # Import and run calculation
     try:
         from .calculations import perform_calculation
 
         result = perform_calculation({
-            'dimensions': project['dimensions'],
-            'spacing': project['spacing'],
-            'material_id': project.get('material_id')
+            'dimensions': meta.get('dimensions', {}),
+            'spacing': meta.get('spacing', {}),
+            'material_id': meta.get('material_id')
         })
 
-        # Store calculation ID
+        # Store calculation ID in metadata
         calc_id = f"calc_{uuid.uuid4().hex[:12]}"
-        project['calculation_id'] = calc_id
-        project['updated_at'] = datetime.utcnow().isoformat()
+        meta['calculation_id'] = calc_id
+        _db.update_project(project_id, {'metadata': json.dumps(meta)})
 
         return jsonify({
             "success": True,

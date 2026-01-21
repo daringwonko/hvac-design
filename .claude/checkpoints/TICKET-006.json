@@ -1,0 +1,27 @@
+{
+  "ticket_id": "TICKET-006",
+  "timestamp": "2026-01-21T14:15:00Z",
+  "status": "COMPLETE",
+  "files_created": ["/home/user/hvac-design/test_integration.sh"],
+  "files_modified": [],
+  "verification_result": "PASS",
+  "test_scenarios": [
+    "test_health_check - Backend health endpoint",
+    "test_floor_plan_api - GET /api/floor-plan returns rooms",
+    "test_hvac_api - POST /api/hvac/auto-design returns equipment",
+    "test_hvac_load_calc - POST /api/hvac/calculate-load returns load data",
+    "test_electrical_api - POST /api/electrical/auto-design returns equipment",
+    "test_electrical_load_calc - POST /api/electrical/calculate-load returns load data",
+    "test_plumbing_api - POST /api/plumbing/auto-route returns pipes",
+    "test_plumbing_validate - POST /api/plumbing/validate returns validation",
+    "test_projects_crud - Create/Read/List/Delete projects with SQLite",
+    "test_no_500_errors - No 500 errors on GET endpoints"
+  ],
+  "script_features": [
+    "Color-coded output (PASS/FAIL)",
+    "Automatic backend detection",
+    "JSON response validation",
+    "Test summary with counts",
+    "Exit code 0 on all pass, 1 on any failure"
+  ]
+}
