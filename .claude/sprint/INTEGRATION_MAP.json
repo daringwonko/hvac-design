@@ -1,0 +1,47 @@
+{
+  "mission": "LoadCalculationEngine - Sprint 002 Integration Map",
+  "timestamp": "2026-01-21",
+  "orchestrator_pattern": {
+    "central_class": "LoadCalculationEngine",
+    "role": "Coordinate structural, MEP, environmental, and optimization engines",
+    "coordinates": [
+      "StructuralEngine",
+      "MEPSystemEngine",
+      "MultiStoryDesigner",
+      "SitePlanner",
+      "QuantumInspiredOptimizer",
+      "EnergyOptimizationEngine",
+      "CeilingPanelCalculator"
+    ]
+  },
+  "critical_finding": {
+    "issue": "LoadCalculation class ALREADY EXISTS in structural_engine",
+    "decision_required": "Extend vs. wrap vs. replace",
+    "recommendation": "Wrapper pattern - LoadCalculationEngine coordinates existing LoadCalculation"
+  },
+  "method_mappings": [
+    {"load_calc_method": "_calculate_hvac_loads", "calls": "MEPSystemEngine.design_hvac(rooms)"},
+    {"load_calc_method": "_calculate_electrical_loads", "calls": "MEPSystemEngine.design_electrical(rooms, building_type)"},
+    {"load_calc_method": "_calculate_plumbing_loads", "calls": "MEPSystemEngine.design_plumbing(rooms, fixtures)"},
+    {"load_calc_method": "_calculate_structural_loads", "calls": "StructuralEngine.design_beam/column/foundation"},
+    {"load_calc_method": "_get_environmental_context", "calls": "SitePlanner.get_environmental_loads_context() [NEW]"},
+    {"load_calc_method": "_calculate_panel_loads", "calls": "CeilingPanelCalculator + material lookup"},
+    {"load_calc_method": "_optimize_load_distribution", "calls": "QuantumInspiredOptimizer.optimize()"},
+    {"load_calc_method": "_aggregate_results", "calls": "Apply EnergyOptimizationEngine patterns"}
+  ],
+  "gaps_to_fill": [
+    {"id": "GAP-001", "title": "SitePlanner environmental context", "priority": "HIGH", "blocking": true},
+    {"id": "GAP-002", "title": "Material weight properties", "priority": "MEDIUM", "blocking": false},
+    {"id": "GAP-003", "title": "Load aggregation logic", "priority": "HIGH", "blocking": true},
+    {"id": "GAP-007", "title": "Existing LoadCalculation coordination", "priority": "CRITICAL", "blocking": true}
+  ],
+  "dataclass_outputs": [
+    "LoadResult - comprehensive load calculation result",
+    "FloorLoadBreakdown - per-floor load summary",
+    "SpaceLoadBreakdown - per-space load summary",
+    "LoadOptimization - optimization results",
+    "CostBreakdown - cost estimates",
+    "LoadAlert - threshold-triggered alerts",
+    "LoadRecommendation - improvement suggestions"
+  ]
+}
