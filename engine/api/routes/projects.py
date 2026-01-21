@@ -2,6 +2,7 @@
 Project management endpoints for the API.
 """
 
+import json
 import os
 import uuid
 from datetime import datetime
@@ -102,7 +103,6 @@ def create_project():
         )
 
         # Update with additional fields via metadata
-        import json
         metadata = json.dumps({
             'dimensions': data['dimensions'],
             'spacing': data.get('spacing', {'perimeter_gap_mm': 200, 'panel_gap_mm': 50}),
@@ -167,7 +167,6 @@ def list_projects():
       200:
         description: List of projects
     """
-    import json
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     search = request.args.get('search', '')
@@ -236,7 +235,6 @@ def get_project(project_id: str):
       404:
         description: Project not found
     """
-    import json
     project = _db.get_project(project_id)
 
     if project is None:
@@ -291,7 +289,6 @@ def update_project(project_id: str):
       404:
         description: Project not found
     """
-    import json
     project = _db.get_project(project_id)
 
     if project is None:
@@ -422,7 +419,6 @@ def calculate_project(project_id: str):
       404:
         description: Project not found
     """
-    import json
     project = _db.get_project(project_id)
 
     if project is None:
