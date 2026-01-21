@@ -106,11 +106,41 @@ function PlumbingIcon() {
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <div className="min-h-screen flex">
+      {/* Mobile hamburger - visible only on small screens */}
+      <button
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-800 rounded-lg"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      >
+        {mobileMenuOpen ? (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        )}
+      </button>
+
+      {/* Mobile overlay backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-slate-800 border-r border-slate-700 transition-all duration-300`}>
+      <aside className={`
+        ${sidebarOpen ? 'w-64' : 'w-16'}
+        bg-slate-800 border-r border-slate-700 transition-all duration-300
+        fixed md:relative inset-y-0 left-0 z-40
+        transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+      `}>
         <div className="flex items-center justify-between h-16 px-4 border-b border-slate-700">
           {sidebarOpen && (
             <span className="text-lg font-bold text-primary-400">MEP Studio</span>
@@ -130,6 +160,7 @@ export default function Layout() {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                   isActive
@@ -146,7 +177,7 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden md:ml-0">
         {/* Header */}
         <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6">
           <h1 className="text-xl font-semibold">MEP Design Studio</h1>

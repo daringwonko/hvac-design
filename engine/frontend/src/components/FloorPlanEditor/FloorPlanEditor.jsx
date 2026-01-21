@@ -487,6 +487,7 @@ export default function FloorPlanEditor() {
   // Local UI state
   const [scale, setScale] = useState(0.05) // 1mm = 0.05px
   const [gridSize, setGridSize] = useState(500) // 500mm grid
+  const [propertiesOpen, setPropertiesOpen] = useState(false)
   const svgRef = useRef(null)
 
   // Canvas dimensions
@@ -740,7 +741,7 @@ export default function FloorPlanEditor() {
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Canvas */}
-        <div className="lg:col-span-3 bg-slate-900 rounded-lg overflow-auto" style={{ height: '600px' }}>
+        <div className="lg:col-span-3 bg-slate-900 rounded-lg overflow-auto h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[600px] min-h-[300px]">
           <svg
             ref={svgRef}
             width={canvasWidth}
@@ -810,29 +811,65 @@ export default function FloorPlanEditor() {
           </svg>
         </div>
 
-        {/* Properties panel */}
-        <div className="space-y-4">
-          <PropertiesPanel
-            room={selectedRoom}
-            onUpdate={handleUpdateRoom}
-          />
+        {/* Properties panel - drawer on mobile, sidebar on desktop */}
+        <div className={`
+          lg:relative lg:block
+          ${propertiesOpen ? 'fixed inset-x-0 bottom-0 z-50' : 'hidden lg:block'}
+          lg:space-y-4
+        `}>
+          {/* Mobile drawer header */}
+          <div className="lg:hidden flex items-center justify-between p-4 bg-slate-800 border-b border-slate-700">
+            <span className="font-semibold">Room Properties</span>
+            <button onClick={() => setPropertiesOpen(false)}>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
 
-          {/* Instructions */}
-          <div className="p-4 bg-slate-800 rounded-lg">
-            <h4 className="text-sm font-semibold text-white mb-2">Instructions</h4>
-            <ul className="text-xs text-slate-400 space-y-1">
-              <li>Click toolbar buttons to add rooms</li>
-              <li>Drag rooms to reposition</li>
-              <li>Drag any of the 8 handles to resize</li>
-              <li>Corner handles resize both dimensions</li>
-              <li>Edge handles resize one dimension</li>
-              <li>Click room to select and edit properties</li>
-              <li>Click background to deselect</li>
-              <li>Export JSON for use with HVAC router</li>
-            </ul>
+          <div className="max-h-[50vh] lg:max-h-none overflow-auto space-y-4">
+            <PropertiesPanel
+              room={selectedRoom}
+              onUpdate={handleUpdateRoom}
+            />
+
+            {/* Instructions */}
+            <div className="p-4 bg-slate-800 rounded-lg">
+              <h4 className="text-sm font-semibold text-white mb-2">Instructions</h4>
+              <ul className="text-xs text-slate-400 space-y-1">
+                <li>Click toolbar buttons to add rooms</li>
+                <li>Drag rooms to reposition</li>
+                <li>Drag any of the 8 handles to resize</li>
+                <li>Corner handles resize both dimensions</li>
+                <li>Edge handles resize one dimension</li>
+                <li>Click room to select and edit properties</li>
+                <li>Click background to deselect</li>
+                <li>Export JSON for use with HVAC router</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Mobile properties toggle - only visible on small screens when room selected */}
+      {selectedRoom && (
+        <button
+          className="lg:hidden fixed bottom-4 right-4 z-40 p-3 bg-primary-600 rounded-full shadow-lg"
+          onClick={() => setPropertiesOpen(!propertiesOpen)}
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+        </button>
+      )}
+
+      {/* Backdrop for mobile drawer */}
+      {propertiesOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setPropertiesOpen(false)}
+        />
+      )}
     </div>
   )
 }
