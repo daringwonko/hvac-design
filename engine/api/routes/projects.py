@@ -10,8 +10,15 @@ from flask import Blueprint, request, jsonify, g
 from ..middleware.auth import require_auth
 from ..middleware.rate_limit import rate_limit
 
-# Import SQLite database - use relative import to avoid triggering engine/__init__.py
-from ...core.project_database import ProjectDatabase
+# Import SQLite database
+try:
+    from ...core.project_database import ProjectDatabase
+    DB_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logging.warning(f"ProjectDatabase not available: {e}")
+    DB_AVAILABLE = False
+    ProjectDatabase = None
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/api/v1')
 

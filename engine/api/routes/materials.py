@@ -8,13 +8,9 @@ from ..middleware.rate_limit import rate_limit
 
 materials_bp = Blueprint('materials', __name__, url_prefix='/api/v1')
 
-# Import materials from core
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
+# Import materials from core using relative import
 try:
-    from core.ceiling_panel_calc import MATERIALS, Material
+    from ...core.ceiling_panel_calc import MATERIALS, Material
 except ImportError:
     MATERIALS = {}
     Material = None

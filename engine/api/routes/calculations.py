@@ -17,12 +17,8 @@ from ..middleware.auth import require_auth
 from ..middleware.rate_limit import rate_limit
 
 # Import core calculation engine
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
 try:
-    from core.ceiling_panel_calc import (
+    from ...core.ceiling_panel_calc import (
         CeilingDimensions,
         PanelSpacing,
         CeilingPanelCalculator,

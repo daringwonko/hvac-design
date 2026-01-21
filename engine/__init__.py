@@ -21,7 +21,7 @@ __version__ = "2.0.0"
 __author__ = "Ceiling Panel Calculator Team"
 
 # Convenience imports for common use cases
-from core import (
+from .core import (
     CeilingPanelCalculator,
     CeilingDimensions,
     PanelSpacing,

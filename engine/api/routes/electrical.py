@@ -8,11 +8,17 @@ import logging
 from flask import Blueprint, jsonify, request
 
 # Import MEP engine
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
-from design.mep_systems import MEPSystemEngine, Room, ElectricalPhase, ElectricalDesign
+try:
+    from ...design.mep_systems import MEPSystemEngine, Room, ElectricalPhase, ElectricalDesign
+    MEP_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logging.warning(f"MEP systems not available: {e}")
+    MEP_AVAILABLE = False
+    MEPSystemEngine = None
+    Room = None
+    ElectricalPhase = None
+    ElectricalDesign = None
 
 logger = logging.getLogger(__name__)
 
