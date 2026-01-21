@@ -150,7 +150,7 @@ export default function Visualization() {
         </div>
 
         {/* 3D Canvas */}
-        <div className="lg:col-span-3 card overflow-hidden" style={{ height: '600px' }}>
+        <div className="lg:col-span-3 card overflow-hidden h-[50vh] min-h-[400px] max-h-[700px]">
           <Canvas>
             <Suspense fallback={null}>
               <PerspectiveCamera

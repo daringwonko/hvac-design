@@ -1,0 +1,615 @@
+{
+  "sprint_id": "SPRINT-003-UX-EXCELLENCE",
+  "title": "UX Excellence & 3D Integration",
+  "created_by": "Main Context (Claude)",
+  "created_at": "2026-01-21",
+  "branch": "claude/hvac-design-images-aXBTX",
+  "status": "PLANNING_COMPLETE",
+
+  "objective": "Transform the HVAC Design Studio from functional prototype (5.8/10 UX) to professional-grade design tool (8.5/10 UX) through comprehensive UX improvements, 3D expansion, and file import capabilities.",
+
+  "scout_findings_summary": {
+    "floor_plan_editor": {
+      "critical_issues": [
+        "Rooms stack on top of each other (all spawn at 1000,1000)",
+        "No input validation on dimension fields",
+        "Event listener accumulation causes performance degradation",
+        "Resize only from bottom-right corner"
+      ],
+      "file": "FloorPlanEditor.jsx (605 lines)"
+    },
+    "responsiveness": {
+      "score": "6.5/10",
+      "critical": "Sidebar always visible on mobile, 600px fixed canvas heights",
+      "missing": "sm: breakpoint optimization"
+    },
+    "3d_capabilities": {
+      "stack": "Three.js + React Three Fiber + Drei",
+      "reusability": "9/10 - ready to extend to other modules",
+      "performance_needed": "Memoization for large scenes"
+    },
+    "file_import": {
+      "current": "EXPORT ONLY - No import capability",
+      "sketchup": "Not supported",
+      "recommendation": "Build DXF import (ezdxf already installed)"
+    },
+    "ux_interactions": {
+      "score": "5.8/10",
+      "coverage": "32 of 120 best practices (26.7%)",
+      "critical_missing": ["Undo/Redo", "Multi-select", "Copy/Paste", "Confirmation dialogs"]
+    },
+    "state_management": {
+      "score": "4/10",
+      "issue": "Zustand installed but NOT USED",
+      "scattered": "75 useState instances across components",
+      "data_loss": "No localStorage persistence"
+    }
+  },
+
+  "success_criteria": [
+    "UX score improves from 5.8 to 8.0+",
+    "Responsiveness score improves from 6.5 to 8.5+",
+    "Undo/Redo system fully functional",
+    "Multi-select with batch operations working",
+    "DXF file import operational",
+    "3D view available for Floor Plan Editor",
+    "Mobile navigation (hamburger menu) implemented",
+    "All critical UX bugs fixed",
+    "Zero technical debt introduced",
+    "EPO Human Advocacy approval on all waves"
+  ],
+
+  "estimated_agents": {
+    "scouts": 8,
+    "fixers": 32,
+    "validators": 8,
+    "epo_advocacy": 8,
+    "git_commit": 8,
+    "orchestrator": 1,
+    "deployment_strategist": 1,
+    "synthesizer": 1,
+    "total": 67
+  },
+
+  "waves": [
+    {
+      "wave_id": 1,
+      "name": "Foundation Analysis",
+      "description": "Scout comprehensive UX analysis (COMPLETED)",
+      "phase": "ANALYSIS",
+      "status": "COMPLETED",
+      "agents_deployed": 8,
+      "deliverables": ["8 Scout reports compiled"]
+    },
+    {
+      "wave_id": 2,
+      "name": "Critical Bug Fixes",
+      "description": "Fix blocking UX issues in Floor Plan Editor",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [1],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-001",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Fix room stacking - implement smart spawn positioning with collision detection",
+            "lines_affected": "~50",
+            "context_estimate": "10K tokens"
+          },
+          {
+            "fixer_id": "FIXER-002",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Add input validation to dimension fields with error feedback",
+            "lines_affected": "~80",
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-003",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Refactor event listeners to single delegated pattern with throttling",
+            "lines_affected": "~100",
+            "context_estimate": "12K tokens"
+          },
+          {
+            "fixer_id": "FIXER-004",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Add 8-point resize handles (all corners + edges)",
+            "lines_affected": "~120",
+            "context_estimate": "10K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-001",
+          "objective": "Verify Floor Plan Editor bugs fixed",
+          "tests": [
+            "Add 5 rooms - verify they don't stack",
+            "Enter invalid dimensions - verify error shown",
+            "Drag rooms rapidly - verify no lag",
+            "Resize from all corners - verify works"
+          ]
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-001",
+          "trigger": "wave_completion",
+          "review_scope": "Floor Plan Editor UX improvements"
+        },
+        "git_commit": {
+          "commit_id": "GIT-001",
+          "message_template": "[Wave 2] Fix critical Floor Plan Editor UX bugs"
+        }
+      },
+      "total_context_estimate": "48K tokens"
+    },
+    {
+      "wave_id": 3,
+      "name": "State Management Refactor",
+      "description": "Implement Zustand store for global state and undo/redo",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [2],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-005",
+            "target": "/home/user/hvac-design/engine/frontend/src/store/floorPlanStore.js",
+            "objective": "Create Zustand store for floor plan state with undo/redo history",
+            "lines_estimate": 200,
+            "context_estimate": "12K tokens"
+          },
+          {
+            "fixer_id": "FIXER-006",
+            "target": "/home/user/hvac-design/engine/frontend/src/store/selectionStore.js",
+            "objective": "Create selection store supporting multi-select",
+            "lines_estimate": 100,
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-007",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Integrate Zustand stores, remove local useState",
+            "lines_affected": "~150",
+            "context_estimate": "12K tokens"
+          },
+          {
+            "fixer_id": "FIXER-008",
+            "target": "/home/user/hvac-design/engine/frontend/src/hooks/useLocalStorage.js",
+            "objective": "Create localStorage persistence hook for auto-save",
+            "lines_estimate": 50,
+            "context_estimate": "5K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-002",
+          "objective": "Verify state management works",
+          "tests": [
+            "Edit room - Ctrl+Z undoes - verify",
+            "Refresh page - verify state persists",
+            "Multi-select 3 rooms - verify all highlighted"
+          ]
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-002",
+          "trigger": "wave_completion",
+          "questions": ["Is undo/redo responsive?", "Does data persist reliably?"]
+        },
+        "git_commit": {
+          "commit_id": "GIT-002",
+          "message_template": "[Wave 3] Implement Zustand state management with undo/redo"
+        }
+      },
+      "total_context_estimate": "45K tokens"
+    },
+    {
+      "wave_id": 4,
+      "name": "Responsive Navigation",
+      "description": "Implement mobile-friendly navigation with hamburger menu",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [2],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-009",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/Layout/Layout.jsx",
+            "objective": "Add mobile hamburger menu with sliding drawer",
+            "lines_affected": "~100",
+            "context_estimate": "10K tokens"
+          },
+          {
+            "fixer_id": "FIXER-010",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/Visualization/Visualization.jsx",
+            "objective": "Replace fixed 600px height with responsive min(600px, 50vh)",
+            "lines_affected": "~20",
+            "context_estimate": "6K tokens"
+          },
+          {
+            "fixer_id": "FIXER-011",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Make canvas height responsive, add properties drawer for mobile",
+            "lines_affected": "~60",
+            "context_estimate": "8K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-003",
+          "objective": "Verify responsiveness",
+          "tests": [
+            "Resize to 375px width - verify hamburger menu appears",
+            "Click hamburger - verify drawer slides in",
+            "View canvas on mobile - verify fits viewport"
+          ]
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-003",
+          "trigger": "wave_completion",
+          "questions": ["Is mobile UX delightful?", "Do touch targets meet 44px minimum?"]
+        },
+        "git_commit": {
+          "commit_id": "GIT-003",
+          "message_template": "[Wave 4] Implement responsive navigation and canvas sizing"
+        }
+      },
+      "total_context_estimate": "32K tokens"
+    },
+    {
+      "wave_id": 5,
+      "name": "Canvas Interaction Upgrade",
+      "description": "Implement professional pan/zoom/snap interactions",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [3],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-012",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Add scroll-wheel zoom and spacebar+drag pan",
+            "lines_affected": "~80",
+            "context_estimate": "10K tokens"
+          },
+          {
+            "fixer_id": "FIXER-013",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Add smart alignment guides (snap to edges, centers)",
+            "lines_affected": "~120",
+            "context_estimate": "12K tokens"
+          },
+          {
+            "fixer_id": "FIXER-014",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Implement multi-select (Ctrl+click, drag-box selection)",
+            "lines_affected": "~150",
+            "context_estimate": "12K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-004",
+          "objective": "Verify canvas interactions",
+          "tests": [
+            "Scroll wheel - verify zoom works",
+            "Spacebar+drag - verify pan works",
+            "Ctrl+click rooms - verify multi-select",
+            "Drag near edge - verify alignment guide appears"
+          ]
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-004",
+          "trigger": "wave_completion",
+          "questions": ["Does it feel like Figma?", "Are power users delighted?"]
+        },
+        "git_commit": {
+          "commit_id": "GIT-004",
+          "message_template": "[Wave 5] Professional canvas interactions (zoom, pan, multi-select)"
+        }
+      },
+      "total_context_estimate": "42K tokens"
+    },
+    {
+      "wave_id": 6,
+      "name": "Keyboard Shortcuts & Clipboard",
+      "description": "Implement comprehensive keyboard shortcuts and copy/paste",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [5],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-015",
+            "target": "/home/user/hvac-design/engine/frontend/src/hooks/useKeyboardShortcuts.js",
+            "objective": "Create global keyboard shortcuts hook",
+            "lines_estimate": 150,
+            "context_estimate": "10K tokens"
+          },
+          {
+            "fixer_id": "FIXER-016",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Integrate shortcuts: Ctrl+Z/Y, Ctrl+C/V, Delete, Ctrl+A",
+            "lines_affected": "~60",
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-017",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/ui/KeyboardShortcutsModal.jsx",
+            "objective": "Create searchable keyboard shortcuts reference modal",
+            "lines_estimate": 120,
+            "context_estimate": "8K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-005",
+          "objective": "Verify keyboard shortcuts",
+          "tests": [
+            "Ctrl+Z - verify undo works",
+            "Ctrl+C then Ctrl+V - verify copy/paste",
+            "Press ? - verify shortcuts modal opens"
+          ]
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-005",
+          "trigger": "wave_completion",
+          "questions": ["Are shortcuts discoverable?", "Do power users work faster?"]
+        },
+        "git_commit": {
+          "commit_id": "GIT-005",
+          "message_template": "[Wave 6] Keyboard shortcuts and clipboard operations"
+        }
+      },
+      "total_context_estimate": "34K tokens"
+    },
+    {
+      "wave_id": 7,
+      "name": "DXF File Import",
+      "description": "Implement DXF file import capability",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [3],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-018",
+            "target": "/home/user/hvac-design/engine/core/dxf_importer.py",
+            "objective": "Create DXF parser using ezdxf for geometry extraction",
+            "lines_estimate": 250,
+            "context_estimate": "15K tokens"
+          },
+          {
+            "fixer_id": "FIXER-019",
+            "target": "/home/user/hvac-design/engine/api/routes/imports.py",
+            "objective": "Create import API endpoint POST /api/imports/dxf",
+            "lines_estimate": 100,
+            "context_estimate": "8K tokens"
+          },
+          {
+            "fixer_id": "FIXER-020",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/ImportDialog/ImportDialog.jsx",
+            "objective": "Create file upload UI with drag-drop and format validation",
+            "lines_estimate": 180,
+            "context_estimate": "12K tokens"
+          },
+          {
+            "fixer_id": "FIXER-021",
+            "target": "/home/user/hvac-design/engine/api/app.py",
+            "objective": "Register imports blueprint",
+            "lines_affected": "~5",
+            "context_estimate": "4K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-006",
+          "objective": "Verify DXF import works",
+          "tests": [
+            "Upload sample DXF - verify rooms detected",
+            "Import multi-room DXF - verify all rooms appear",
+            "Upload invalid file - verify error message"
+          ]
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-006",
+          "trigger": "wave_completion",
+          "questions": ["Can SketchUp users import via DXF?", "Is workflow intuitive?"]
+        },
+        "git_commit": {
+          "commit_id": "GIT-006",
+          "message_template": "[Wave 7] DXF file import with drag-drop UI"
+        }
+      },
+      "total_context_estimate": "47K tokens"
+    },
+    {
+      "wave_id": 8,
+      "name": "3D Floor Plan View",
+      "description": "Extend 3D visualization to Floor Plan Editor",
+      "phase": "IMPLEMENTATION",
+      "depends_on": [5],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-022",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlan3DView.jsx",
+            "objective": "Create 3D floor plan visualization component reusing Visualization patterns",
+            "lines_estimate": 250,
+            "context_estimate": "15K tokens"
+          },
+          {
+            "fixer_id": "FIXER-023",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/Room3D.jsx",
+            "objective": "Create 3D room component with walls and labels",
+            "lines_estimate": 150,
+            "context_estimate": "10K tokens"
+          },
+          {
+            "fixer_id": "FIXER-024",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Add 2D/3D view toggle button",
+            "lines_affected": "~40",
+            "context_estimate": "6K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-007",
+          "objective": "Verify 3D floor plan view",
+          "tests": [
+            "Click 3D toggle - verify 3D view appears",
+            "Orbit around rooms - verify controls work",
+            "Edit room in 2D - verify 3D updates"
+          ]
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-007",
+          "trigger": "wave_completion",
+          "questions": ["Does 3D view help architects visualize?", "Is performance smooth?"]
+        },
+        "git_commit": {
+          "commit_id": "GIT-007",
+          "message_template": "[Wave 8] 3D floor plan visualization"
+        }
+      },
+      "total_context_estimate": "39K tokens"
+    },
+    {
+      "wave_id": 9,
+      "name": "Final Integration & Polish",
+      "description": "Wire up all components, add confirmation dialogs, polish UX",
+      "phase": "INTEGRATION",
+      "depends_on": [6, 7, 8],
+      "agents": {
+        "fixers": [
+          {
+            "fixer_id": "FIXER-025",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/ui/ConfirmDialog.jsx",
+            "objective": "Create reusable confirmation dialog component",
+            "lines_estimate": 80,
+            "context_estimate": "6K tokens"
+          },
+          {
+            "fixer_id": "FIXER-026",
+            "target": "/home/user/hvac-design/engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "objective": "Add delete confirmation, unsaved changes warning",
+            "lines_affected": "~40",
+            "context_estimate": "6K tokens"
+          },
+          {
+            "fixer_id": "FIXER-027",
+            "target": "Multiple files",
+            "objective": "Add loading states, error boundaries, empty states",
+            "context_estimate": "10K tokens"
+          }
+        ],
+        "validator": {
+          "validator_id": "VAL-008",
+          "objective": "Full integration test",
+          "tests": [
+            "Complete workflow: Import DXF → Edit → Undo → Export",
+            "Delete room → verify confirmation appears",
+            "Navigate away with unsaved changes → verify warning"
+          ]
+        },
+        "epo_advocacy": {
+          "advocacy_id": "ADV-008",
+          "trigger": "pre_merge",
+          "review_scope": "Complete Sprint 003 deliverables",
+          "questions": [
+            "Does this feel like a professional design tool?",
+            "Would EPO engineers be delighted using this daily?",
+            "Is any technical debt introduced?"
+          ]
+        },
+        "git_commit": {
+          "commit_id": "GIT-008",
+          "message_template": "[Wave 9] Final integration and UX polish"
+        }
+      },
+      "total_context_estimate": "30K tokens"
+    },
+    {
+      "wave_id": 10,
+      "name": "Final Validation",
+      "description": "Comprehensive testing and UX scoring",
+      "phase": "VALIDATION",
+      "depends_on": [9],
+      "agents": {
+        "validators": [
+          {
+            "validator_id": "VAL-009",
+            "objective": "UX Score Assessment",
+            "tests": [
+              "Evaluate against 120 UX best practices",
+              "Calculate new UX score (target: 8.0+)",
+              "Test all keyboard shortcuts",
+              "Test all responsive breakpoints"
+            ]
+          },
+          {
+            "validator_id": "VAL-010",
+            "objective": "Performance testing",
+            "tests": [
+              "Load floor plan with 50 rooms - verify smooth",
+              "Rapid undo/redo 20x - verify no lag",
+              "Import large DXF - verify completes in <5s"
+            ]
+          },
+          {
+            "validator_id": "VAL-011",
+            "objective": "App startup and integration",
+            "tests": [
+              "./start.sh - verify app starts",
+              "All routes accessible",
+              "No console errors"
+            ]
+          }
+        ],
+        "epo_advocacy": {
+          "advocacy_id": "ADV-FINAL",
+          "trigger": "pre_merge",
+          "veto_authority": true
+        },
+        "git_commit": {
+          "commit_id": "GIT-FINAL",
+          "message_template": "[Sprint 003 Complete] UX Excellence & 3D Integration"
+        }
+      },
+      "total_context_estimate": "25K tokens"
+    }
+  ],
+
+  "total_estimated_context": {
+    "wave_1": "69K tokens (COMPLETED)",
+    "wave_2": "48K tokens",
+    "wave_3": "45K tokens",
+    "wave_4": "32K tokens",
+    "wave_5": "42K tokens",
+    "wave_6": "34K tokens",
+    "wave_7": "47K tokens",
+    "wave_8": "39K tokens",
+    "wave_9": "30K tokens",
+    "wave_10": "25K tokens",
+    "total": "411K tokens across 67 agents"
+  },
+
+  "files_to_create": [
+    "engine/frontend/src/store/floorPlanStore.js",
+    "engine/frontend/src/store/selectionStore.js",
+    "engine/frontend/src/hooks/useLocalStorage.js",
+    "engine/frontend/src/hooks/useKeyboardShortcuts.js",
+    "engine/frontend/src/components/ui/KeyboardShortcutsModal.jsx",
+    "engine/frontend/src/components/ui/ConfirmDialog.jsx",
+    "engine/frontend/src/components/ImportDialog/ImportDialog.jsx",
+    "engine/frontend/src/components/FloorPlanEditor/FloorPlan3DView.jsx",
+    "engine/frontend/src/components/FloorPlanEditor/Room3D.jsx",
+    "engine/core/dxf_importer.py",
+    "engine/api/routes/imports.py"
+  ],
+
+  "files_to_modify": [
+    "engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+    "engine/frontend/src/components/Layout/Layout.jsx",
+    "engine/frontend/src/components/Visualization/Visualization.jsx",
+    "engine/api/app.py"
+  ],
+
+  "orchestrator_instructions": {
+    "entry_point": "Wave 2 (Wave 1 completed)",
+    "exit_condition": "<promise>SPRINT_COMPLETE</promise>",
+    "checkpoint_frequency": "After each wave",
+    "escalation_threshold": 2,
+    "git_commit_trigger": "After each successful wave validation"
+  },
+
+  "leadership_approval_required": true,
+  "approval_request": "Sprint 003 plan ready. Reply 'APPROVED' to deploy Orchestrator and begin Wave 2 execution."
+}
