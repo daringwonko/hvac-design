@@ -121,7 +121,7 @@ function ValidatedInput({ value, onChange, min, max, label }) {
   )
 }
 
-function Room({ room, scale, isSelected, onSelect, onDrag, onResize }) {
+function Room({ room, scale, isSelected, onSelect, onToggleSelect, onDrag, onResize, onDragEnd }) {
   const [isDragging, setIsDragging] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const [resizeHandle, setResizeHandle] = useState(null)
@@ -141,7 +141,12 @@ function Room({ room, scale, isSelected, onSelect, onDrag, onResize }) {
       setIsDragging(true)
     }
     setDragStart({ x: e.clientX, y: e.clientY })
-    onSelect(room.id)
+    // Ctrl+click or Cmd+click toggles selection instead of replacing
+    if (e.ctrlKey || e.metaKey) {
+      onToggleSelect(room.id)
+    } else {
+      onSelect(room.id)
+    }
     e.stopPropagation()
   }
 
@@ -164,10 +169,14 @@ function Room({ room, scale, isSelected, onSelect, onDrag, onResize }) {
   )
 
   const handleMouseUp = useCallback(() => {
+    // Notify parent when drag ends to clear alignment guides
+    if (isDragging && onDragEnd) {
+      onDragEnd()
+    }
     setIsDragging(false)
     setIsResizing(false)
     setResizeHandle(null)
-  }, [])
+  }, [isDragging, onDragEnd])
 
   useEffect(() => {
     if (isDragging || isResizing) {
@@ -294,6 +303,43 @@ function Grid({ width, height, gridSize, scale }) {
   }
 
   return <g className="grid">{lines}</g>
+}
+
+// Alignment guides component - shows dashed lines when rooms align
+function AlignmentGuides({ guides, scale, canvasWidth, canvasHeight }) {
+  if (!guides || guides.length === 0) return null
+
+  return (
+    <g className="alignment-guides">
+      {guides.map((guide, i) => (
+        guide.type === 'vertical' ? (
+          <line
+            key={`v-${i}-${guide.position}`}
+            x1={guide.position * scale}
+            y1={0}
+            x2={guide.position * scale}
+            y2={canvasHeight * scale}
+            stroke="#22c55e"
+            strokeWidth={1}
+            strokeDasharray="4,4"
+            style={{ pointerEvents: 'none' }}
+          />
+        ) : (
+          <line
+            key={`h-${i}-${guide.position}`}
+            x1={0}
+            y1={guide.position * scale}
+            x2={canvasWidth * scale}
+            y2={guide.position * scale}
+            stroke="#22c55e"
+            strokeWidth={1}
+            strokeDasharray="4,4"
+            style={{ pointerEvents: 'none' }}
+          />
+        )
+      ))}
+    </g>
+  )
 }
 
 function Toolbar({ onAddRoom, onDelete, onExport, selectedRoom }) {
@@ -448,6 +494,7 @@ export default function FloorPlanEditor() {
     select,
     clearSelection,
     toggleSelect,
+    selectMultiple,
     hasSelection,
     getFirstSelected
   } = useSelectionStore()
@@ -489,6 +536,21 @@ export default function FloorPlanEditor() {
   const [gridSize, setGridSize] = useState(500) // 500mm grid
   const [propertiesOpen, setPropertiesOpen] = useState(false)
   const svgRef = useRef(null)
+
+  // Pan and zoom state
+  const [viewOffset, setViewOffset] = useState({ x: 0, y: 0 })
+  const [isPanning, setIsPanning] = useState(false)
+  const [spacebarDown, setSpacebarDown] = useState(false)
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 })
+
+  // Box selection state
+  const [isBoxSelecting, setIsBoxSelecting] = useState(false)
+  const [boxStart, setBoxStart] = useState({ x: 0, y: 0 })
+  const [boxEnd, setBoxEnd] = useState({ x: 0, y: 0 })
+
+  // Alignment guides state
+  // Each guide: { type: 'vertical'|'horizontal', position: number }
+  const [alignmentGuides, setAlignmentGuides] = useState([])
 
   // Canvas dimensions
   const canvasWidth = floorPlan.overall_dimensions.width * scale + 100
@@ -571,6 +633,14 @@ export default function FloorPlanEditor() {
     const room = floorPlan.rooms.find(r => r.id === roomId)
     const clampedX = Math.max(0, Math.min(snappedX, floorPlan.overall_dimensions.width - room.dimensions.width))
     const clampedY = Math.max(0, Math.min(snappedY, floorPlan.overall_dimensions.depth - room.dimensions.depth))
+
+    // Detect alignments with other rooms
+    const draggedRoom = {
+      ...room,
+      position: { x: clampedX, y: clampedY }
+    }
+    const guides = detectAlignments(draggedRoom, floorPlan.rooms)
+    setAlignmentGuides(guides)
 
     moveRoom(roomId, { x: clampedX, y: clampedY })
   }
@@ -688,6 +758,181 @@ export default function FloorPlanEditor() {
   const handleZoomOut = () => setScale(prev => Math.max(prev / 1.2, 0.02))
   const handleZoomReset = () => setScale(0.05)
 
+  // Reset view (zoom and pan)
+  const handleResetView = () => {
+    setScale(0.05)
+    setViewOffset({ x: 0, y: 0 })
+  }
+
+  // Wheel zoom handler - zoom centered on mouse cursor
+  const handleWheel = useCallback((e) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? 0.9 : 1.1
+    setScale(prev => Math.max(0.02, Math.min(0.2, prev * delta)))
+  }, [])
+
+  // Spacebar key handlers for pan mode
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault()
+        setSpacebarDown(true)
+      }
+    }
+    const handleKeyUp = (e) => {
+      if (e.code === 'Space') {
+        setSpacebarDown(false)
+        setIsPanning(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [])
+
+  // Pan handlers
+  const handlePanStart = (e) => {
+    if (spacebarDown) {
+      setIsPanning(true)
+      setPanStart({ x: e.clientX - viewOffset.x, y: e.clientY - viewOffset.y })
+    }
+  }
+
+  const handlePanMove = (e) => {
+    if (isPanning) {
+      setViewOffset({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y
+      })
+    }
+  }
+
+  const handlePanEnd = () => {
+    setIsPanning(false)
+  }
+
+  // Detect alignments between dragged room and other rooms
+  const detectAlignments = useCallback((draggedRoom, allRooms) => {
+    const guides = []
+    const threshold = gridSize // Snap threshold in mm
+
+    const draggedLeft = draggedRoom.position.x
+    const draggedRight = draggedRoom.position.x + draggedRoom.dimensions.width
+    const draggedTop = draggedRoom.position.y
+    const draggedBottom = draggedRoom.position.y + draggedRoom.dimensions.depth
+    const draggedCenterX = draggedRoom.position.x + draggedRoom.dimensions.width / 2
+    const draggedCenterY = draggedRoom.position.y + draggedRoom.dimensions.depth / 2
+
+    allRooms.forEach(room => {
+      if (room.id === draggedRoom.id) return
+
+      const roomLeft = room.position.x
+      const roomRight = room.position.x + room.dimensions.width
+      const roomTop = room.position.y
+      const roomBottom = room.position.y + room.dimensions.depth
+      const roomCenterX = room.position.x + room.dimensions.width / 2
+      const roomCenterY = room.position.y + room.dimensions.depth / 2
+
+      // Vertical alignments (x-axis) - left/right edges and center
+      if (Math.abs(draggedLeft - roomLeft) < threshold) {
+        guides.push({ type: 'vertical', position: roomLeft })
+      }
+      if (Math.abs(draggedLeft - roomRight) < threshold) {
+        guides.push({ type: 'vertical', position: roomRight })
+      }
+      if (Math.abs(draggedRight - roomLeft) < threshold) {
+        guides.push({ type: 'vertical', position: roomLeft })
+      }
+      if (Math.abs(draggedRight - roomRight) < threshold) {
+        guides.push({ type: 'vertical', position: roomRight })
+      }
+      if (Math.abs(draggedCenterX - roomCenterX) < threshold) {
+        guides.push({ type: 'vertical', position: roomCenterX })
+      }
+
+      // Horizontal alignments (y-axis) - top/bottom edges and center
+      if (Math.abs(draggedTop - roomTop) < threshold) {
+        guides.push({ type: 'horizontal', position: roomTop })
+      }
+      if (Math.abs(draggedTop - roomBottom) < threshold) {
+        guides.push({ type: 'horizontal', position: roomBottom })
+      }
+      if (Math.abs(draggedBottom - roomTop) < threshold) {
+        guides.push({ type: 'horizontal', position: roomTop })
+      }
+      if (Math.abs(draggedBottom - roomBottom) < threshold) {
+        guides.push({ type: 'horizontal', position: roomBottom })
+      }
+      if (Math.abs(draggedCenterY - roomCenterY) < threshold) {
+        guides.push({ type: 'horizontal', position: roomCenterY })
+      }
+    })
+
+    // Dedupe guides by type and position
+    return guides.filter((g, i, arr) =>
+      arr.findIndex(x => x.type === g.type && x.position === g.position) === i
+    )
+  }, [gridSize])
+
+  // Clear alignment guides when drag ends
+  const handleDragEnd = useCallback(() => {
+    setAlignmentGuides([])
+  }, [])
+
+  // Box selection handlers
+  const handleCanvasMouseDown = (e) => {
+    // Only start box select if clicking on background (not a room) and no spacebar (not panning)
+    if (!spacebarDown && e.target === e.currentTarget) {
+      const rect = svgRef.current.getBoundingClientRect()
+      const x = (e.clientX - rect.left - 50 - viewOffset.x) / scale
+      const y = (e.clientY - rect.top - 50 - viewOffset.y) / scale
+      setBoxStart({ x, y })
+      setBoxEnd({ x, y })
+      setIsBoxSelecting(true)
+    }
+  }
+
+  const handleCanvasMouseMove = (e) => {
+    if (isBoxSelecting) {
+      const rect = svgRef.current.getBoundingClientRect()
+      const x = (e.clientX - rect.left - 50 - viewOffset.x) / scale
+      const y = (e.clientY - rect.top - 50 - viewOffset.y) / scale
+      setBoxEnd({ x, y })
+    }
+  }
+
+  const handleCanvasMouseUp = () => {
+    if (isBoxSelecting) {
+      // Calculate selection box bounds
+      const left = Math.min(boxStart.x, boxEnd.x)
+      const right = Math.max(boxStart.x, boxEnd.x)
+      const top = Math.min(boxStart.y, boxEnd.y)
+      const bottom = Math.max(boxStart.y, boxEnd.y)
+
+      // Find rooms that intersect with box
+      const roomsInBox = floorPlan.rooms.filter(room => {
+        const roomLeft = room.position.x
+        const roomRight = room.position.x + room.dimensions.width
+        const roomTop = room.position.y
+        const roomBottom = room.position.y + room.dimensions.depth
+
+        // Check intersection
+        return !(roomRight < left || roomLeft > right || roomBottom < top || roomTop > bottom)
+      })
+
+      if (roomsInBox.length > 0) {
+        selectMultiple(roomsInBox.map(r => r.id))
+      } else {
+        clearSelection()
+      }
+
+      setIsBoxSelecting(false)
+    }
+  }
+
   // Calculate total area
   const totalArea = floorPlan.rooms.reduce(
     (sum, room) => sum + (room.dimensions.width * room.dimensions.depth) / 1000000,
@@ -702,6 +947,7 @@ export default function FloorPlanEditor() {
           <h1 className="text-2xl font-bold text-white">Floor Plan Editor</h1>
           <p className="text-slate-400 mt-1">
             {floorPlan.name} - {floorPlan.rooms.length} rooms - {totalArea.toFixed(1)} m² total
+            {selectedIds.length > 1 && ` (${selectedIds.length} selected)`}
           </p>
         </div>
         <div className="flex gap-2">
@@ -727,6 +973,13 @@ export default function FloorPlanEditor() {
             {Math.round(scale * 1000)}%
           </button>
           <button onClick={handleZoomIn} className="px-3 py-1 bg-slate-700 rounded text-white">+</button>
+          <button
+            onClick={handleResetView}
+            className="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-white text-sm"
+            title="Reset zoom and pan"
+          >
+            Reset View
+          </button>
         </div>
       </div>
 
@@ -741,19 +994,29 @@ export default function FloorPlanEditor() {
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Canvas */}
-        <div className="lg:col-span-3 bg-slate-900 rounded-lg overflow-auto h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[600px] min-h-[300px]">
+        <div
+          className="lg:col-span-3 bg-slate-900 rounded-lg overflow-auto h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[600px] min-h-[300px]"
+          onWheel={handleWheel}
+          onMouseDown={handlePanStart}
+          onMouseMove={handlePanMove}
+          onMouseUp={handlePanEnd}
+          onMouseLeave={handlePanEnd}
+          style={{ cursor: spacebarDown ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
+        >
           <svg
             ref={svgRef}
             width={canvasWidth}
             height={canvasHeight}
             className="cursor-crosshair"
-            onClick={handleBackgroundClick}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
           >
             {/* Background */}
             <rect width={canvasWidth} height={canvasHeight} fill="#0f172a" />
 
-            {/* Transform group for padding */}
-            <g transform="translate(50, 50)">
+            {/* Transform group for padding and pan offset */}
+            <g transform={`translate(${50 + viewOffset.x}, ${50 + viewOffset.y})`}>
               {/* Grid */}
               <Grid
                 width={floorPlan.overall_dimensions.width * scale}
@@ -795,18 +1058,43 @@ export default function FloorPlanEditor() {
                 {(floorPlan.overall_dimensions.depth / 1000).toFixed(2)}m
               </text>
 
+              {/* Alignment guides - rendered before rooms so they appear behind */}
+              <AlignmentGuides
+                guides={alignmentGuides}
+                scale={scale}
+                canvasWidth={floorPlan.overall_dimensions.width}
+                canvasHeight={floorPlan.overall_dimensions.depth}
+              />
+
               {/* Rooms */}
               {floorPlan.rooms.map(room => (
                 <Room
                   key={room.id}
                   room={room}
                   scale={scale}
-                  isSelected={room.id === getFirstSelected()}
+                  isSelected={selectedIds.includes(room.id)}
                   onSelect={select}
+                  onToggleSelect={toggleSelect}
                   onDrag={handleDragRoom}
                   onResize={handleResizeRoom}
+                  onDragEnd={handleDragEnd}
                 />
               ))}
+
+              {/* Selection box visual */}
+              {isBoxSelecting && (
+                <rect
+                  x={Math.min(boxStart.x, boxEnd.x) * scale}
+                  y={Math.min(boxStart.y, boxEnd.y) * scale}
+                  width={Math.abs(boxEnd.x - boxStart.x) * scale}
+                  height={Math.abs(boxEnd.y - boxStart.y) * scale}
+                  fill="rgba(59, 130, 246, 0.2)"
+                  stroke="#3b82f6"
+                  strokeWidth={1}
+                  strokeDasharray="4,4"
+                  style={{ pointerEvents: 'none' }}
+                />
+              )}
             </g>
           </svg>
         </div>
@@ -839,11 +1127,17 @@ export default function FloorPlanEditor() {
               <ul className="text-xs text-slate-400 space-y-1">
                 <li>Click toolbar buttons to add rooms</li>
                 <li>Drag rooms to reposition</li>
+                <li>Green guides show alignment with other rooms</li>
                 <li>Drag any of the 8 handles to resize</li>
                 <li>Corner handles resize both dimensions</li>
                 <li>Edge handles resize one dimension</li>
                 <li>Click room to select and edit properties</li>
+                <li>Ctrl+click to add/remove from selection</li>
+                <li>Drag on background to box-select multiple rooms</li>
                 <li>Click background to deselect</li>
+                <li>Scroll wheel to zoom in/out</li>
+                <li>Hold spacebar + drag to pan the view</li>
+                <li>Click "Reset View" to restore defaults</li>
                 <li>Export JSON for use with HVAC router</li>
               </ul>
             </div>
