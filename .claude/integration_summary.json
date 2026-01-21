@@ -1,0 +1,216 @@
+{
+  "project": "MEP Design Studio",
+  "version": "2.0",
+  "timestamp": "2026-01-21T12:51:00Z",
+
+  "current_state": {
+    "working": {
+      "frontend_vite": true,
+      "hvac_router_ui": true,
+      "electrical_router_ui": true,
+      "plumbing_router_ui": true,
+      "floor_plan_editor_ui": true,
+      "navigation_routing": true
+    },
+    "not_working": {
+      "backend_api": "NOT_RUNNING",
+      "floor_plan_api": "MISSING_ENDPOINT",
+      "plumbing_auto_route": "MISSING_ENDPOINT",
+      "plumbing_validate": "MISSING_ENDPOINT",
+      "hvac_backend_integration": "NOT_WIRED",
+      "electrical_backend_integration": "NOT_WIRED",
+      "sqlite_persistence": "NOT_WIRED",
+      "mep_system_engine": "NOT_INVOKED"
+    }
+  },
+
+  "tickets": [
+    {
+      "id": "TICKET-000",
+      "title": "Unified Application Startup",
+      "priority": "P1",
+      "type": "Infrastructure",
+      "status": "PENDING",
+      "files_to_create": ["/home/user/hvac-design/start.sh"],
+      "files_to_modify": [],
+      "dependencies": [],
+      "success_criteria": [
+        "./start.sh launches both services",
+        "Backend health check passes",
+        "Ctrl+C cleanly stops services"
+      ]
+    },
+    {
+      "id": "TICKET-001",
+      "title": "Implement Floor Plan API",
+      "priority": "P2",
+      "type": "Backend",
+      "status": "PENDING",
+      "files_to_create": ["/home/user/hvac-design/engine/api/routes/floor_plan.py"],
+      "files_to_modify": ["/home/user/hvac-design/engine/api/app.py"],
+      "dependencies": ["TICKET-000"],
+      "endpoints": [
+        "GET /api/floor-plan",
+        "POST /api/floor-plan",
+        "PUT /api/floor-plan/{id}",
+        "GET /api/floor-plan/{id}"
+      ],
+      "success_criteria": [
+        "curl returns Goldilocks floor plan",
+        "All routers load rooms on mount"
+      ]
+    },
+    {
+      "id": "TICKET-002",
+      "title": "HVAC API + Frontend Integration",
+      "priority": "P3",
+      "type": "Full-Stack",
+      "status": "PENDING",
+      "files_to_create": ["/home/user/hvac-design/engine/api/routes/hvac.py"],
+      "files_to_modify": [
+        "/home/user/hvac-design/engine/frontend/src/components/HVACRouter/HVACRouter.jsx",
+        "/home/user/hvac-design/engine/api/app.py"
+      ],
+      "dependencies": ["TICKET-000", "TICKET-001"],
+      "endpoints": [
+        "POST /api/hvac/auto-design",
+        "POST /api/hvac/calculate-load",
+        "POST /api/hvac/validate"
+      ],
+      "engine_method": "MEPSystemEngine.design_hvac()",
+      "success_criteria": [
+        "Auto-Design button populates equipment",
+        "MEPSystemEngine.design_hvac() invoked"
+      ]
+    },
+    {
+      "id": "TICKET-003",
+      "title": "Electrical API + Frontend Integration",
+      "priority": "P4",
+      "type": "Full-Stack",
+      "status": "PENDING",
+      "files_to_create": ["/home/user/hvac-design/engine/api/routes/electrical.py"],
+      "files_to_modify": [
+        "/home/user/hvac-design/engine/frontend/src/components/ElectricalRouter/ElectricalRouter.jsx",
+        "/home/user/hvac-design/engine/api/app.py"
+      ],
+      "dependencies": ["TICKET-000", "TICKET-001"],
+      "endpoints": [
+        "POST /api/electrical/auto-design",
+        "POST /api/electrical/calculate-load",
+        "POST /api/electrical/validate"
+      ],
+      "engine_method": "MEPSystemEngine.design_electrical()",
+      "success_criteria": [
+        "Auto-Design button populates equipment",
+        "MEPSystemEngine.design_electrical() invoked"
+      ]
+    },
+    {
+      "id": "TICKET-004",
+      "title": "Plumbing API + Frontend Integration",
+      "priority": "P5",
+      "type": "Full-Stack",
+      "status": "PENDING",
+      "files_to_create": ["/home/user/hvac-design/engine/api/routes/plumbing.py"],
+      "files_to_modify": [
+        "/home/user/hvac-design/engine/frontend/src/components/PlumbingRouter/PlumbingRouter.jsx",
+        "/home/user/hvac-design/engine/api/app.py"
+      ],
+      "dependencies": ["TICKET-000", "TICKET-001"],
+      "endpoints": [
+        "POST /api/plumbing/auto-route",
+        "POST /api/plumbing/validate",
+        "POST /api/plumbing/design"
+      ],
+      "engine_method": "MEPSystemEngine.design_plumbing()",
+      "success_criteria": [
+        "Auto-Route button populates pipes",
+        "Validate button checks vents",
+        "MEPSystemEngine.design_plumbing() invoked"
+      ]
+    },
+    {
+      "id": "TICKET-005",
+      "title": "Wire SQLite Persistence",
+      "priority": "P6",
+      "type": "Backend",
+      "status": "PENDING",
+      "files_to_create": [],
+      "files_to_modify": [
+        "/home/user/hvac-design/engine/api/app.py",
+        "/home/user/hvac-design/engine/api/routes/projects.py",
+        "/home/user/hvac-design/engine/api/routes/floor_plan.py"
+      ],
+      "dependencies": ["TICKET-000", "TICKET-001", "TICKET-002", "TICKET-003", "TICKET-004"],
+      "success_criteria": [
+        "Projects persist after restart",
+        "Floor plans saved to SQLite"
+      ]
+    },
+    {
+      "id": "TICKET-006",
+      "title": "Integration Testing",
+      "priority": "P7",
+      "type": "QA",
+      "status": "PENDING",
+      "files_to_create": ["/home/user/hvac-design/test_integration.sh"],
+      "files_to_modify": [],
+      "dependencies": ["ALL"],
+      "success_criteria": [
+        "All 8 test scenarios pass",
+        "Zero console errors",
+        "Zero API 500 errors"
+      ]
+    }
+  ],
+
+  "orchestration": {
+    "pattern": "Ralph Wiggum Loop",
+    "completion_promise": "<promise>INTEGRATION_COMPLETE</promise>",
+    "gap_detection_rules": [
+      "No TODO/STUB/pass without implementation",
+      "No 404 or 500 responses",
+      "Frontend buttons must trigger API calls",
+      "MEPSystemEngine methods must be invoked",
+      "All success criteria must be verifiable"
+    ],
+    "phases": {
+      "phase_1_infrastructure": ["TICKET-000"],
+      "phase_2_core_api": ["TICKET-001", "TICKET-002", "TICKET-003", "TICKET-004"],
+      "phase_3_persistence": ["TICKET-005"],
+      "phase_4_validation": ["TICKET-006"]
+    }
+  },
+
+  "files_summary": {
+    "to_create": [
+      "/home/user/hvac-design/start.sh",
+      "/home/user/hvac-design/engine/api/routes/floor_plan.py",
+      "/home/user/hvac-design/engine/api/routes/hvac.py",
+      "/home/user/hvac-design/engine/api/routes/electrical.py",
+      "/home/user/hvac-design/engine/api/routes/plumbing.py",
+      "/home/user/hvac-design/test_integration.sh"
+    ],
+    "to_modify": [
+      "/home/user/hvac-design/engine/api/app.py",
+      "/home/user/hvac-design/engine/frontend/src/components/HVACRouter/HVACRouter.jsx",
+      "/home/user/hvac-design/engine/frontend/src/components/ElectricalRouter/ElectricalRouter.jsx",
+      "/home/user/hvac-design/engine/frontend/src/components/PlumbingRouter/PlumbingRouter.jsx",
+      "/home/user/hvac-design/engine/api/routes/projects.py"
+    ],
+    "existing_resources": [
+      "/home/user/hvac-design/data/goldilocks_3b3b_floorplan.json",
+      "/home/user/hvac-design/engine/design/mep_systems.py",
+      "/home/user/hvac-design/engine/design/floor_plan.py",
+      "/home/user/hvac-design/engine/core/project_database.py"
+    ]
+  },
+
+  "estimated_work": {
+    "files_to_create": 6,
+    "files_to_modify": 5,
+    "api_endpoints_to_add": 12,
+    "frontend_integrations": 3
+  }
+}
