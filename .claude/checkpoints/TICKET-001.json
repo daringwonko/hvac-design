@@ -1,0 +1,20 @@
+{
+  "ticket_id": "TICKET-001",
+  "timestamp": "2026-01-21T13:20:00Z",
+  "status": "COMPLETE",
+  "files_created": ["/home/user/hvac-design/engine/api/routes/floor_plan.py"],
+  "files_modified": ["/home/user/hvac-design/engine/api/app.py"],
+  "verification_result": "PASS",
+  "integration_points": [
+    {"from": "app.py:60", "to": "floor_plan.py:17", "type": "blueprint_import"},
+    {"from": "app.py:67", "to": "floor_plan.py:17", "type": "blueprint_registration"}
+  ],
+  "endpoints_created": [
+    "GET /api/floor-plan",
+    "POST /api/floor-plan",
+    "GET /api/floor-plan/<id>",
+    "PUT /api/floor-plan/<id>",
+    "DELETE /api/floor-plan/<id>",
+    "GET /api/floor-plans"
+  ]
+}

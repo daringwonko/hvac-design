@@ -57,12 +57,20 @@ def create_app(config: dict = None) -> Flask:
     from .routes.materials import materials_bp
     from .routes.exports import exports_bp
     from .routes.health import health_bp
+    from .routes.floor_plan import floor_plan_bp
+    from .routes.hvac import hvac_bp
+    from .routes.electrical import electrical_bp
+    from .routes.plumbing import plumbing_bp
 
     app.register_blueprint(calculations_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(materials_bp)
     app.register_blueprint(exports_bp)
     app.register_blueprint(health_bp)
+    app.register_blueprint(floor_plan_bp)
+    app.register_blueprint(hvac_bp)
+    app.register_blueprint(electrical_bp)
+    app.register_blueprint(plumbing_bp)
 
     # Request logging middleware
     @app.before_request

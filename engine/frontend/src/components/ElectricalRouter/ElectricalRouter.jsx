@@ -360,7 +360,7 @@ function PropertiesPanel({ selectedItem, equipment, wires, onUpdate, onDelete, c
   )
 }
 
-function Toolbar({ tool, setTool, phase, setPhase, onCalculate, onExport }) {
+function Toolbar({ tool, setTool, phase, setPhase, onCalculate, onExport, onAutoDesign, isLoading }) {
   return (
     <div className="flex items-center gap-2 p-2 bg-slate-800 rounded-lg">
       <div className="flex gap-1 border-r border-slate-600 pr-2">
@@ -398,6 +398,14 @@ function Toolbar({ tool, setTool, phase, setPhase, onCalculate, onExport }) {
 
       <div className="flex gap-1 ml-auto">
         <button
+          onClick={onAutoDesign}
+          disabled={isLoading}
+          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-wait text-white text-xs rounded flex items-center gap-1"
+          title="Auto-design electrical system using AI"
+        >
+          <span>{isLoading ? '...' : '🤖'}</span> Auto-Design
+        </button>
+        <button
           onClick={onCalculate}
           className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs rounded flex items-center gap-1"
         >
@@ -424,6 +432,7 @@ export default function ElectricalRouter({ floorPlan }) {
   const [calculations, setCalculations] = useState(null)
   const [isDrawingWire, setIsDrawingWire] = useState(false)
   const [wireStart, setWireStart] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   const svgRef = useRef(null)
 
@@ -548,6 +557,78 @@ export default function ElectricalRouter({ floorPlan }) {
     URL.revokeObjectURL(url)
   }
 
+  // Auto-design using MEPSystemEngine API
+  const handleAutoDesign = async () => {
+    setIsLoading(true)
+    try {
+      const roomsData = plan.rooms.map(room => ({
+        name: room.name,
+        width: room.dimensions.width,
+        height: room.dimensions.depth,
+        x: room.position.x,
+        y: room.position.y,
+        occupancy: 2,
+        has_window: true
+      }))
+
+      const response = await fetch('/api/electrical/auto-design', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rooms: roomsData,
+          buildingType: 'residential',
+          phase: phase
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        if (result.data.equipment && result.data.equipment.length > 0) {
+          const newEquipment = result.data.equipment.map((eq, idx) => ({
+            id: generateId(),
+            type: eq.type || 'outlet_duplex',
+            position: { x: eq.x || 100 + idx * 100, y: eq.y || 100 + idx * 80 },
+            specs: { circuit: eq.circuit || 'general' },
+            label: eq.label
+          }))
+          setEquipment(prev => [...prev, ...newEquipment])
+        }
+
+        if (result.data.wires && result.data.wires.length > 0) {
+          const newWires = result.data.wires.map(w => ({
+            id: generateId(),
+            start: { x: w.startX, y: w.startY },
+            end: { x: w.endX, y: w.endY },
+            circuitType: w.circuitType || '15A',
+            gauge: w.gauge
+          }))
+          setWires(prev => [...prev, ...newWires])
+        }
+
+        if (result.data.design) {
+          setCalculations({
+            totalLoad: result.data.design.total_load,
+            mainBreaker: result.data.design.main_breaker,
+            circuits: result.data.design.circuits,
+            wireGauge: result.data.design.wire_gauge,
+            cost: result.data.design.cost
+          })
+        }
+
+        console.log('Electrical auto-design complete:', result.data)
+      } else {
+        console.error('Auto-design failed:', result.error)
+        alert('Auto-design failed: ' + (result.error?.message || 'Unknown error'))
+      }
+    } catch (err) {
+      console.error('Auto-design API error:', err)
+      alert('Failed to connect to API. Make sure the backend is running.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'v') setTool('select')
@@ -577,6 +658,8 @@ export default function ElectricalRouter({ floorPlan }) {
         setPhase={setPhase}
         onCalculate={handleCalculate}
         onExport={handleExport}
+        onAutoDesign={handleAutoDesign}
+        isLoading={isLoading}
       />
 
       <div className="flex-1 grid grid-cols-12 gap-4 mt-4">
