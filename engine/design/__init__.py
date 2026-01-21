@@ -6,6 +6,7 @@ Contains building design engines including:
 - MEP (Mechanical, Electrical, Plumbing) systems
 - Multi-story building design
 - Site planning and zoning
+- Unified load calculation system
 """
 
 from .structural_engine import (
@@ -13,15 +14,13 @@ from .structural_engine import (
     BeamDesign,
     ColumnDesign,
     FoundationDesign,
-    LoadCalculation,
 )
 
 from .mep_systems import (
     MEPSystemEngine,
-    HVACSystem,
-    ElectricalSystem,
-    PlumbingSystem,
-    MEPCoordinator,
+    HVACDesign,
+    ElectricalDesign,
+    PlumbingDesign,
 )
 
 from .multi_story_designer import (
@@ -40,19 +39,47 @@ from .site_planner import (
     SiteAnalysisResult,
 )
 
+# Load Calculation Module (Sprint 002)
+from .load_types import (
+    LoadCategory,
+    WarningSeverity,
+    LoadType,
+    LoadWarning,
+    FloorLoadBreakdown,
+    SpaceLoadBreakdown,
+    CostBreakdown,
+    LoadOptimizationResult,
+    LoadRecommendation,
+    EnvironmentalContext,
+    LoadResult,
+    ComplianceStatus,
+    OptimizationStrategy,
+)
+
+from .load_calculation import (
+    LoadCalculationEngine,
+    BuildingSpecification,
+)
+
+from .load_thresholds import (
+    LoadThreshold,
+    ComplianceRule,
+    ThresholdChecker,
+    get_default_thresholds,
+    get_thresholds_by_category,
+)
+
 __all__ = [
     # Structural
     'StructuralEngine',
     'BeamDesign',
     'ColumnDesign',
     'FoundationDesign',
-    'LoadCalculation',
     # MEP
     'MEPSystemEngine',
-    'HVACSystem',
-    'ElectricalSystem',
-    'PlumbingSystem',
-    'MEPCoordinator',
+    'HVACDesign',
+    'ElectricalDesign',
+    'PlumbingDesign',
     # Multi-story
     'MultiStoryDesigner',
     'Floor',
@@ -65,4 +92,27 @@ __all__ = [
     'ZoningType',
     'ZoningRegulation',
     'SiteAnalysisResult',
+    # Load Calculation Types
+    'LoadCategory',
+    'WarningSeverity',
+    'LoadType',
+    'LoadWarning',
+    'FloorLoadBreakdown',
+    'SpaceLoadBreakdown',
+    'CostBreakdown',
+    'LoadOptimizationResult',
+    'LoadRecommendation',
+    'EnvironmentalContext',
+    'LoadResult',
+    'ComplianceStatus',
+    'OptimizationStrategy',
+    # Load Calculation Engine
+    'LoadCalculationEngine',
+    'BuildingSpecification',
+    # Load Thresholds
+    'LoadThreshold',
+    'ComplianceRule',
+    'ThresholdChecker',
+    'get_default_thresholds',
+    'get_thresholds_by_category',
 ]
