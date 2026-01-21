@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 const navigation = [
   { name: 'Dashboard', path: '/', icon: HomeIcon },
+  { name: 'Floor Plan', path: '/floor-plan', icon: FloorPlanIcon },
   { name: 'Calculator', path: '/calculator', icon: CalculatorIcon },
   { name: 'Projects', path: '/projects', icon: FolderIcon },
   { name: '3D View', path: '/visualization', icon: CubeIcon },
@@ -67,6 +68,14 @@ function DownloadIcon() {
   )
 }
 
+function FloorPlanIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    </svg>
+  )
+}
+
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
@@ -76,7 +85,7 @@ export default function Layout() {
       <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-slate-800 border-r border-slate-700 transition-all duration-300`}>
         <div className="flex items-center justify-between h-16 px-4 border-b border-slate-700">
           {sidebarOpen && (
-            <span className="text-lg font-bold text-primary-400">CeilingCalc</span>
+            <span className="text-lg font-bold text-primary-400">MEP Studio</span>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -112,7 +121,7 @@ export default function Layout() {
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6">
-          <h1 className="text-xl font-semibold">Ceiling Panel Calculator</h1>
+          <h1 className="text-xl font-semibold">MEP Design Studio</h1>
           <div className="flex items-center gap-4">
             <button className="btn btn-secondary text-sm">
               API Docs

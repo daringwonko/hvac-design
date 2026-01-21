@@ -8,6 +8,7 @@ import Visualization from './components/Visualization/Visualization'
 import Monitoring from './components/Monitoring/Monitoring'
 import Materials from './components/Materials'
 import Exports from './components/Exports'
+import FloorPlanEditor from './components/FloorPlanEditor'
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="monitoring" element={<Monitoring />} />
           <Route path="materials" element={<Materials />} />
           <Route path="exports" element={<Exports />} />
+          <Route path="floor-plan" element={<FloorPlanEditor />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
