@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import useFloorPlanStore from '../../store/floorPlanStore'
+import useSelectionStore from '../../store/selectionStore'
+import { useFloorPlanPersistence } from '../../hooks/useLocalStorage'
 
 // Room type colors for visual distinction
 const ROOM_COLORS = {
@@ -430,16 +433,58 @@ function PropertiesPanel({ room, onUpdate }) {
 }
 
 export default function FloorPlanEditor() {
-  // Floor plan state
-  const [floorPlan, setFloorPlan] = useState({
-    id: 'fp_goldilocks',
-    name: 'Goldilocks 3B-3B',
-    overall_dimensions: { width: 17850, depth: 7496 },
-    rooms: [],
-    walls: []
-  })
+  // Zustand stores
+  const {
+    floorPlan,
+    addRoom,
+    updateRoom,
+    deleteRoom,
+    moveRoom,
+    resizeRoom
+  } = useFloorPlanStore()
 
-  const [selectedRoomId, setSelectedRoomId] = useState(null)
+  const {
+    selectedIds,
+    select,
+    clearSelection,
+    toggleSelect,
+    hasSelection,
+    getFirstSelected
+  } = useSelectionStore()
+
+  // For undo/redo - subscribe to temporal state for reactivity
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
+
+  useEffect(() => {
+    // Subscribe to temporal state changes
+    const temporalStore = useFloorPlanStore.temporal
+    const updateUndoRedoState = () => {
+      const { pastStates, futureStates } = temporalStore.getState()
+      setCanUndo(pastStates.length > 0)
+      setCanRedo(futureStates.length > 0)
+    }
+
+    // Initial state
+    updateUndoRedoState()
+
+    // Subscribe to changes
+    const unsubscribe = temporalStore.subscribe(updateUndoRedoState)
+    return unsubscribe
+  }, [])
+
+  const handleUndo = useCallback(() => {
+    useFloorPlanStore.temporal.getState().undo()
+  }, [])
+
+  const handleRedo = useCallback(() => {
+    useFloorPlanStore.temporal.getState().redo()
+  }, [])
+
+  // For persistence
+  const { saveStatus, lastSaved } = useFloorPlanPersistence(useFloorPlanStore, 'hvac_floor_plan')
+
+  // Local UI state
   const [scale, setScale] = useState(0.05) // 1mm = 0.05px
   const [gridSize, setGridSize] = useState(500) // 500mm grid
   const svgRef = useRef(null)
@@ -449,7 +494,7 @@ export default function FloorPlanEditor() {
   const canvasHeight = floorPlan.overall_dimensions.depth * scale + 100
 
   // Get selected room
-  const selectedRoom = floorPlan.rooms.find(r => r.id === selectedRoomId)
+  const selectedRoom = floorPlan.rooms.find(r => r.id === getFirstSelected())
 
   // Generate unique ID
   const generateId = () => `room_${Date.now().toString(36)}`
@@ -503,21 +548,16 @@ export default function FloorPlanEditor() {
       metadata: {}
     }
 
-    setFloorPlan(prev => ({
-      ...prev,
-      rooms: [...prev.rooms, newRoom]
-    }))
-    setSelectedRoomId(newRoom.id)
+    addRoom(newRoom)
+    select(newRoom.id)
   }
 
   // Delete selected room
   const handleDeleteRoom = () => {
-    if (!selectedRoomId) return
-    setFloorPlan(prev => ({
-      ...prev,
-      rooms: prev.rooms.filter(r => r.id !== selectedRoomId)
-    }))
-    setSelectedRoomId(null)
+    const selectedId = getFirstSelected()
+    if (!selectedId) return
+    deleteRoom(selectedId)
+    clearSelection()
   }
 
   // Drag room
@@ -531,14 +571,7 @@ export default function FloorPlanEditor() {
     const clampedX = Math.max(0, Math.min(snappedX, floorPlan.overall_dimensions.width - room.dimensions.width))
     const clampedY = Math.max(0, Math.min(snappedY, floorPlan.overall_dimensions.depth - room.dimensions.depth))
 
-    setFloorPlan(prev => ({
-      ...prev,
-      rooms: prev.rooms.map(r =>
-        r.id === roomId
-          ? { ...r, position: { x: clampedX, y: clampedY } }
-          : r
-      )
-    }))
+    moveRoom(roomId, { x: clampedX, y: clampedY })
   }
 
   // Resize room with 8-directional handle support
@@ -624,30 +657,12 @@ export default function FloorPlanEditor() {
     const clampedX = Math.max(0, Math.min(snappedX, floorPlan.overall_dimensions.width - snappedWidth))
     const clampedY = Math.max(0, Math.min(snappedY, floorPlan.overall_dimensions.depth - snappedDepth))
 
-    setFloorPlan(prev => ({
-      ...prev,
-      rooms: prev.rooms.map(r =>
-        r.id === roomId
-          ? {
-              ...r,
-              position: { x: clampedX, y: clampedY },
-              dimensions: { ...r.dimensions, width: snappedWidth, depth: snappedDepth }
-            }
-          : r
-      )
-    }))
+    resizeRoom(roomId, { width: snappedWidth, depth: snappedDepth }, { x: clampedX, y: clampedY })
   }
 
   // Update room properties
   const handleUpdateRoom = (roomId, updates) => {
-    setFloorPlan(prev => ({
-      ...prev,
-      rooms: prev.rooms.map(r =>
-        r.id === roomId
-          ? { ...r, ...updates }
-          : r
-      )
-    }))
+    updateRoom(roomId, updates)
   }
 
   // Export to JSON
@@ -664,7 +679,7 @@ export default function FloorPlanEditor() {
 
   // Deselect on background click
   const handleBackgroundClick = () => {
-    setSelectedRoomId(null)
+    clearSelection()
   }
 
   // Zoom controls
@@ -689,6 +704,23 @@ export default function FloorPlanEditor() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className="px-3 py-1 bg-slate-700 rounded text-white disabled:opacity-50"
+            title="Undo (Ctrl+Z)"
+          >
+            Undo
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className="px-3 py-1 bg-slate-700 rounded text-white disabled:opacity-50"
+            title="Redo (Ctrl+Y)"
+          >
+            Redo
+          </button>
+          <div className="w-px bg-slate-600 mx-1"></div>
           <button onClick={handleZoomOut} className="px-3 py-1 bg-slate-700 rounded text-white">-</button>
           <button onClick={handleZoomReset} className="px-3 py-1 bg-slate-700 rounded text-white">
             {Math.round(scale * 1000)}%
@@ -768,8 +800,8 @@ export default function FloorPlanEditor() {
                   key={room.id}
                   room={room}
                   scale={scale}
-                  isSelected={room.id === selectedRoomId}
-                  onSelect={setSelectedRoomId}
+                  isSelected={room.id === getFirstSelected()}
+                  onSelect={select}
                   onDrag={handleDragRoom}
                   onResize={handleResizeRoom}
                 />
