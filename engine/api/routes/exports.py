@@ -116,8 +116,15 @@ def export_svg():
         filename = f"{export_id}.svg"
         filepath = os.path.join(_output_dir, filename)
 
-        svg_gen = SVGGenerator(scale=options.get('scale', 0.5))
-        svg_gen.generate(filepath, ceiling_dims, panel_spacing, layout)
+        # Get material if specified
+        material = None
+        material_id = data.get('material_id')
+        if material_id and material_id in MATERIALS:
+            material = MATERIALS[material_id]
+
+        # Fixed: Use correct SVGGenerator signature
+        svg_gen = SVGGenerator(ceiling_dims, panel_spacing, layout, scale=options.get('scale', 0.5))
+        svg_gen.generate_svg(filepath, material)
 
         # Get file size
         file_size = os.path.getsize(filepath)
@@ -222,8 +229,9 @@ def export_dxf():
         filename = f"{export_id}.dxf"
         filepath = os.path.join(_output_dir, filename)
 
-        dxf_gen = DXFGenerator()
-        dxf_gen.generate(filepath, ceiling_dims, panel_spacing, layout, material)
+        # Fixed: Use correct DXFGenerator signature
+        dxf_gen = DXFGenerator(ceiling_dims, panel_spacing, layout)
+        dxf_gen.generate_dxf(filepath, material)
 
         # Get file size
         file_size = os.path.getsize(filepath)
@@ -322,25 +330,23 @@ def export_3d():
             panel_thickness_mm=options.get('thickness_mm', 20)
         )
 
-        # Calculate layout first
+        # Calculate layout using the actual calculator (Fixed: no longer hardcoded)
         length_mm = dims.get('length_mm', 5000)
         width_mm = dims.get('width_mm', 4000)
         perimeter_gap = spacing.get('perimeter_gap_mm', 200)
         panel_gap = spacing.get('panel_gap_mm', 50)
 
-        # Simple layout calculation
-        available_length = length_mm - 2 * perimeter_gap
-        available_width = width_mm - 2 * perimeter_gap
-        panels_x = 3
-        panels_y = 2
-        panel_width = (available_width - (panels_y - 1) * panel_gap) / panels_y
-        panel_height = (available_length - (panels_x - 1) * panel_gap) / panels_x
+        # Use CeilingPanelCalculator for proper layout calculation
+        ceiling_dims = CeilingDimensions(length_mm=length_mm, width_mm=width_mm)
+        panel_spacing = PanelSpacing(perimeter_gap_mm=perimeter_gap, panel_gap_mm=panel_gap)
+        calculator = CeilingPanelCalculator(ceiling_dims, panel_spacing)
+        layout = calculator.calculate_optimal_layout()
 
         mesh = generator.generate_layout_mesh(
-            panels_x=panels_x,
-            panels_y=panels_y,
-            panel_width_mm=panel_width,
-            panel_height_mm=panel_height,
+            panels_x=layout.panels_per_column,
+            panels_y=layout.panels_per_row,
+            panel_width_mm=layout.panel_width_mm,
+            panel_height_mm=layout.panel_length_mm,
             include_frame=options.get('include_frame', True)
         )
 
