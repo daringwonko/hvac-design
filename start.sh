@@ -19,7 +19,7 @@ lsof -ti:3000 | xargs kill -9 2>/dev/null || true
 # Start backend
 echo "[2/4] Starting Flask backend on :5000..."
 cd engine
-python api/app.py &
+python -m api.app &
 BACKEND_PID=$!
 echo "       Backend PID: $BACKEND_PID"
 

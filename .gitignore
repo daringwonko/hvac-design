@@ -30,3 +30,6 @@ coverage/
 # Misc
 *.swp
 *.swo
+__pycache__/
+*.pyc
+venv/
