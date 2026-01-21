@@ -1,0 +1,283 @@
+{
+  "sprint_id": "SPRINT-001-IMPORT-ARCHITECTURE",
+  "phase": "SCOUTING_COMPLETE",
+  "generated_at": "2026-01-21T15:30:00Z",
+  "scouts_deployed": 8,
+  "scouts_completed": 8,
+
+  "executive_summary": {
+    "verdict": "ARCHITECTURAL REFACTOR REQUIRED",
+    "blocking_issues": 2,
+    "critical_issues": 4,
+    "medium_issues": 3,
+    "low_issues": 2,
+    "estimated_fix_time": "2-3 hours",
+    "risk_level": "MEDIUM"
+  },
+
+  "blocking_issues": [
+    {
+      "id": "BLOCK-001",
+      "severity": "BLOCKING",
+      "title": "projects.py relative import beyond top-level package",
+      "file": "/home/user/hvac-design/engine/api/routes/projects.py",
+      "line": 14,
+      "code": "from ...core.project_database import ProjectDatabase",
+      "error": "ImportError: attempted relative import beyond top-level package",
+      "root_cause": "When running 'python -m api.app' from engine/, the top-level package is 'api'. The three-dot relative import tries to traverse above 'api' which Python forbids.",
+      "suggested_fix": {
+        "strategy": "Use sys.path pattern like other route files",
+        "code_before": "from ...core.project_database import ProjectDatabase",
+        "code_after": "import sys\nimport os\nsys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))\nfrom core.project_database import ProjectDatabase",
+        "files_affected": ["/home/user/hvac-design/engine/api/routes/projects.py"],
+        "tech_debt_assessment": "LOW - aligns with existing pattern in 6 other files"
+      }
+    },
+    {
+      "id": "BLOCK-002",
+      "severity": "BLOCKING",
+      "title": "core/__init__.py imports non-existent setup_logging",
+      "file": "/home/user/hvac-design/engine/core/__init__.py",
+      "line": 27,
+      "code": "from .logging_config import setup_logging",
+      "error": "ImportError: cannot import name 'setup_logging' from 'core.logging_config'",
+      "root_cause": "The function is named 'configure_logging' in logging_config.py, not 'setup_logging'",
+      "suggested_fix": {
+        "strategy": "Rename import to match actual function name",
+        "code_before": "setup_logging,",
+        "code_after": "configure_logging,",
+        "files_affected": ["/home/user/hvac-design/engine/core/__init__.py"],
+        "tech_debt_assessment": "NONE - simple typo fix"
+      }
+    }
+  ],
+
+  "critical_issues": [
+    {
+      "id": "CRIT-001",
+      "severity": "CRITICAL",
+      "title": "hvac.py/electrical.py/plumbing.py unprotected imports",
+      "files": [
+        "/home/user/hvac-design/engine/api/routes/hvac.py:16",
+        "/home/user/hvac-design/engine/api/routes/electrical.py:15",
+        "/home/user/hvac-design/engine/api/routes/plumbing.py:15"
+      ],
+      "code": "from design.mep_systems import MEPSystemEngine, Room, HVACType, HVACDesign",
+      "problem": "No try/except protection - if design module fails, ENTIRE Flask app crashes",
+      "impact": "If design.mep_systems has any error, none of the API endpoints are available",
+      "suggested_fix": {
+        "strategy": "Add try/except like calculations.py does",
+        "pattern": "try:\n    from design.mep_systems import ...\n    MEP_AVAILABLE = True\nexcept ImportError:\n    MEP_AVAILABLE = False\n    MEPSystemEngine = None",
+        "files_affected": 3,
+        "tech_debt_assessment": "NONE - improves resilience"
+      }
+    },
+    {
+      "id": "CRIT-002",
+      "severity": "CRITICAL",
+      "title": "hvac.py enum value mismatch",
+      "file": "/home/user/hvac-design/engine/api/routes/hvac.py",
+      "lines": "92-98",
+      "problem": "Code references HVACType.MINI_SPLIT, HVACType.DUCTED, HVACType.RADIANT which don't exist in the enum",
+      "actual_enum_values": ["SPLIT_SYSTEM", "VRF", "CHILLED_WATER", "PACKAGE_UNIT"],
+      "impact": "Runtime failures when users request mini_split, ducted, or radiant system types",
+      "suggested_fix": {
+        "strategy": "Update type_mapping to use actual enum values OR add missing enum values",
+        "files_affected": ["/home/user/hvac-design/engine/api/routes/hvac.py", "/home/user/hvac-design/engine/design/mep_systems.py"],
+        "tech_debt_assessment": "LOW"
+      }
+    },
+    {
+      "id": "CRIT-003",
+      "severity": "CRITICAL",
+      "title": "engine/__init__.py uses absolute import instead of relative",
+      "file": "/home/user/hvac-design/engine/__init__.py",
+      "line": 24,
+      "code": "from core import (...)",
+      "problem": "Should be 'from .core import (...)' for proper package-relative import",
+      "impact": "Forces all api/routes files to use sys.path manipulation as workaround",
+      "suggested_fix": {
+        "strategy": "Change to relative import",
+        "code_before": "from core import (",
+        "code_after": "from .core import (",
+        "files_affected": ["/home/user/hvac-design/engine/__init__.py"],
+        "tech_debt_assessment": "NONE - proper Python packaging"
+      }
+    },
+    {
+      "id": "CRIT-004",
+      "severity": "CRITICAL",
+      "title": "start.sh runs from wrong directory",
+      "file": "/home/user/hvac-design/start.sh",
+      "lines": "21-22",
+      "code": "cd engine\npython -m api.app",
+      "problem": "Running from engine/ makes 'api' the top-level package, breaking relative imports to sibling packages",
+      "impact": "All sys.path workarounds in route files are compensating for this",
+      "suggested_fix": {
+        "strategy_a": {
+          "name": "Run from project root (RECOMMENDED)",
+          "code": "cd \"$SCRIPT_DIR\"\npython -m engine.api.app",
+          "benefit": "Eliminates need for ALL sys.path workarounds",
+          "risk": "Requires updating route files to use relative imports"
+        },
+        "strategy_b": {
+          "name": "Keep current structure, fix individual files",
+          "benefit": "Minimal change, lower risk",
+          "risk": "Perpetuates sys.path workaround pattern"
+        }
+      }
+    }
+  ],
+
+  "medium_issues": [
+    {
+      "id": "MED-001",
+      "severity": "MEDIUM",
+      "title": "Inconsistent import patterns across route files",
+      "problem": "6 files use sys.path manipulation, 1 file uses relative imports (projects.py), 1 file is protected (health.py)",
+      "files": {
+        "sys_path_pattern": ["calculations.py", "hvac.py", "electrical.py", "plumbing.py", "materials.py", "exports.py"],
+        "relative_import": ["projects.py"],
+        "protected_import": ["health.py"]
+      },
+      "impact": "Maintenance confusion, harder for new developers",
+      "suggested_fix": "Standardize on ONE pattern across all route files"
+    },
+    {
+      "id": "MED-002",
+      "severity": "MEDIUM",
+      "title": "Missing dependencies not documented",
+      "problem": "Flask, flask-cors, PyJWT required but not in requirements.txt",
+      "suggested_fix": "Verify requirements.txt includes all dependencies"
+    },
+    {
+      "id": "MED-003",
+      "severity": "MEDIUM",
+      "title": "No logging of import failures",
+      "problem": "When imports fail silently (in try/except blocks), no log entry is created",
+      "impact": "Hard to diagnose why services are unavailable in production",
+      "suggested_fix": "Add logger.warning() in except blocks"
+    }
+  ],
+
+  "low_issues": [
+    {
+      "id": "LOW-001",
+      "severity": "LOW",
+      "title": "Late imports of json module",
+      "file": "/home/user/hvac-design/engine/api/routes/projects.py",
+      "lines": [98, 163, 232, 287, 418],
+      "problem": "json imported inside functions instead of at module level",
+      "suggested_fix": "Move 'import json' to top of file"
+    },
+    {
+      "id": "LOW-002",
+      "severity": "LOW",
+      "title": "goldilocks_3b3b_floorplan.json location unverified",
+      "file": "/home/user/hvac-design/engine/api/routes/floor_plan.py",
+      "problem": "File may not exist at expected path",
+      "impact": "Gracefully handled - falls back to empty plan"
+    }
+  ],
+
+  "architectural_observations": [
+    {
+      "observation": "Package hierarchy mismatch",
+      "details": "Code written assuming 'engine' is top-level package, but executed with 'api' as top-level",
+      "recommendation": "Either change execution to 'python -m engine.api.app' OR accept sys.path workarounds"
+    },
+    {
+      "observation": "Mixed import strategies",
+      "details": "Some files use sys.path manipulation, some use relative imports, some have try/except, some don't",
+      "recommendation": "Standardize on one pattern with graceful degradation"
+    },
+    {
+      "observation": "Factory pattern well-implemented",
+      "details": "app.py uses create_app() factory pattern correctly, deferring imports to runtime",
+      "recommendation": "Keep this pattern, ensure all imports inside create_app() are protected"
+    }
+  ],
+
+  "fix_strategies": {
+    "strategy_a": {
+      "name": "Minimal Fix (Quick)",
+      "description": "Fix only blocking issues to get app running",
+      "changes": [
+        "Fix projects.py line 14 to use sys.path pattern",
+        "Fix core/__init__.py line 27 to use configure_logging"
+      ],
+      "estimated_time": "30 minutes",
+      "tech_debt_impact": "MAINTAINS current debt, doesn't add new",
+      "risk": "LOW"
+    },
+    "strategy_b": {
+      "name": "Comprehensive Fix (Medium)",
+      "description": "Fix all critical issues, standardize import pattern",
+      "changes": [
+        "All Strategy A changes",
+        "Add try/except to hvac.py, electrical.py, plumbing.py",
+        "Fix engine/__init__.py to use relative imports",
+        "Fix hvac.py enum mismatches"
+      ],
+      "estimated_time": "2 hours",
+      "tech_debt_impact": "REDUCES debt significantly",
+      "risk": "MEDIUM"
+    },
+    "strategy_c": {
+      "name": "Architectural Refactor (Complete)",
+      "description": "Change execution context to fix root cause",
+      "changes": [
+        "Modify start.sh to run 'python -m engine.api.app' from project root",
+        "Convert all route files to use relative imports",
+        "Remove all sys.path workarounds",
+        "Add consistent try/except protection everywhere"
+      ],
+      "estimated_time": "3-4 hours",
+      "tech_debt_impact": "ELIMINATES architectural debt",
+      "risk": "HIGH - many files change"
+    }
+  },
+
+  "dependency_graph": {
+    "fix_order": [
+      {
+        "level": 0,
+        "fixes": ["BLOCK-002 (core/__init__.py setup_logging)"],
+        "reason": "Core module must load before anything else",
+        "parallel": false
+      },
+      {
+        "level": 1,
+        "fixes": ["BLOCK-001 (projects.py import)"],
+        "reason": "Unblocks app startup",
+        "parallel": false
+      },
+      {
+        "level": 2,
+        "fixes": ["CRIT-001 (hvac/electrical/plumbing try/except)", "CRIT-002 (enum mismatch)"],
+        "reason": "Can run in parallel after app starts",
+        "parallel": true
+      },
+      {
+        "level": 3,
+        "fixes": ["CRIT-003 (engine/__init__.py relative)", "CRIT-004 (start.sh)"],
+        "reason": "Architectural improvements, dependent on strategy choice",
+        "parallel": false
+      }
+    ]
+  },
+
+  "scout_agent_ids": {
+    "projects_py": "a44ac27",
+    "app_py": "af00476",
+    "start_sh": "a64d27e",
+    "engine_init": "a451627",
+    "hvac_py": "a57aa37",
+    "calculations_py": "a484f72",
+    "health_py": "a99b7b2",
+    "core_init": "a873d64"
+  },
+
+  "next_action": "AWAITING_LEADERSHIP_DECISION",
+  "decision_required": "Select fix strategy: A (Minimal), B (Comprehensive), or C (Architectural Refactor)"
+}

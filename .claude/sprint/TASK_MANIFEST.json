@@ -1,0 +1,138 @@
+{
+  "manifest_version": "1.0",
+  "created_at": "2026-01-21T14:00:00Z",
+  "sprint_id": "SPRINT-001-IMPORT-ARCHITECTURE",
+  "sprint_name": "Import Architecture Review & Fix",
+
+  "objective": {
+    "primary": "Full architectural review of Python import strategy across engine/api/routes/",
+    "success_criteria": [
+      "All import paths traced to verified termination points",
+      "All broken/ambiguous paths identified with root cause",
+      "Recommended fix strategy with zero technical debt",
+      "Dependency graph for fix execution order"
+    ]
+  },
+
+  "scope": {
+    "primary_error": {
+      "file": "/home/user/hvac-design/engine/api/routes/projects.py",
+      "line": 14,
+      "error": "ImportError: attempted relative import beyond top-level package",
+      "code": "from ...core.project_database import ProjectDatabase"
+    },
+    "execution_context": {
+      "command": "python -m api.app",
+      "working_directory": "/home/user/hvac-design/engine",
+      "top_level_package": "api",
+      "implication": "Relative imports cannot traverse above 'api' package"
+    },
+    "files_to_scout": [
+      "/home/user/hvac-design/engine/api/routes/projects.py",
+      "/home/user/hvac-design/engine/api/routes/calculations.py",
+      "/home/user/hvac-design/engine/api/routes/hvac.py",
+      "/home/user/hvac-design/engine/api/routes/electrical.py",
+      "/home/user/hvac-design/engine/api/routes/plumbing.py",
+      "/home/user/hvac-design/engine/api/routes/materials.py",
+      "/home/user/hvac-design/engine/api/routes/exports.py",
+      "/home/user/hvac-design/engine/api/routes/health.py",
+      "/home/user/hvac-design/engine/api/routes/floor_plan.py",
+      "/home/user/hvac-design/engine/api/app.py",
+      "/home/user/hvac-design/engine/api/__init__.py",
+      "/home/user/hvac-design/engine/__init__.py",
+      "/home/user/hvac-design/start.sh"
+    ]
+  },
+
+  "known_patterns": {
+    "pattern_A": {
+      "name": "sys.path manipulation",
+      "description": "Insert parent directory into sys.path, then use absolute-style import",
+      "example": "sys.path.insert(0, ...); from core.module import Class",
+      "files_using": ["calculations.py", "hvac.py", "electrical.py", "plumbing.py", "materials.py", "exports.py"],
+      "tech_debt_assessment": "REVIEW_REQUIRED - works but non-standard"
+    },
+    "pattern_B": {
+      "name": "relative import (broken)",
+      "description": "Use ... to traverse up package hierarchy",
+      "example": "from ...core.module import Class",
+      "files_using": ["projects.py"],
+      "tech_debt_assessment": "BROKEN - exceeds top-level package"
+    },
+    "pattern_C": {
+      "name": "unprotected absolute import",
+      "description": "Assume sys.path already modified by another module",
+      "example": "from core.module import Class (no sys.path setup)",
+      "files_using": ["health.py (line 59)"],
+      "tech_debt_assessment": "FRAGILE - depends on import order"
+    }
+  },
+
+  "constraints": {
+    "zero_technical_debt": true,
+    "no_workarounds": true,
+    "no_stubs": true,
+    "surgical_fixes_only": true,
+    "escalate_if": [
+      "architectural_refactoring_required",
+      "file_deletion_required",
+      "multiple_valid_strategies",
+      "ambiguous_termination_point",
+      "change_touches_more_than_3_files"
+    ]
+  },
+
+  "agent_configuration": {
+    "deployment_strategist": {
+      "autonomy": "tactical_with_retry",
+      "max_retries": 2,
+      "can_make_decisions": ["parallelism", "batching", "retry"],
+      "must_escalate": ["strategy_selection", "architectural_changes"]
+    },
+    "scouts": {
+      "output_granularity": "full_with_fixes",
+      "must_include": ["file_paths", "integration_points", "code_snippets", "suggested_fixes"],
+      "trace_to": "verified_termination_or_break_point"
+    },
+    "escalation": {
+      "batching": "after_scout_phase",
+      "format": "consolidated_report"
+    }
+  },
+
+  "output_requirements": {
+    "scout_output_schema": {
+      "file": "string (absolute path)",
+      "signal_paths": [
+        {
+          "id": "string (SP-XXX)",
+          "origin": {
+            "file": "string",
+            "line": "number",
+            "code": "string"
+          },
+          "trace": ["string (file:line steps)"],
+          "termination": {
+            "status": "VERIFIED | BROKEN | AMBIGUOUS | STUBBED",
+            "endpoint": "string (file:line or error)",
+            "reason": "string"
+          },
+          "suggested_fix": {
+            "strategy": "string",
+            "code_change": "string",
+            "files_affected": ["string"],
+            "tech_debt_impact": "NONE | LOW | MEDIUM | HIGH"
+          }
+        }
+      ],
+      "summary": {
+        "total_paths": "number",
+        "verified": "number",
+        "broken": "number",
+        "ambiguous": "number",
+        "stubbed": "number"
+      },
+      "architectural_recommendation": "string"
+    }
+  }
+}
