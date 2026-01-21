@@ -4,6 +4,7 @@ import useSelectionStore from '../../store/selectionStore'
 import { useFloorPlanPersistence } from '../../hooks/useLocalStorage'
 import { useKeyboardShortcuts, FLOOR_PLAN_SHORTCUTS } from '../../hooks/useKeyboardShortcuts'
 import KeyboardShortcutsModal from '../ui/KeyboardShortcutsModal'
+import FloorPlan3DView from './FloorPlan3DView'
 
 // Room type colors for visual distinction
 const ROOM_COLORS = {
@@ -560,6 +561,9 @@ export default function FloorPlanEditor() {
   // Keyboard shortcuts modal state
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
 
+  // 2D/3D view mode state
+  const [viewMode, setViewMode] = useState('2d') // '2d' | '3d'
+
   // Canvas dimensions
   const canvasWidth = floorPlan.overall_dimensions.width * scale + 100
   const canvasHeight = floorPlan.overall_dimensions.depth * scale + 100
@@ -951,6 +955,7 @@ export default function FloorPlanEditor() {
     [FLOOR_PLAN_SHORTCUTS.zoomOut]: handleZoomOut,
     [FLOOR_PLAN_SHORTCUTS.zoomReset]: handleZoomReset,
     [FLOOR_PLAN_SHORTCUTS.help]: () => setShowShortcutsModal(true),
+    'v': () => setViewMode(prev => prev === '2d' ? '3d' : '2d'),
   })
 
   // Box selection handlers
@@ -1038,6 +1043,28 @@ export default function FloorPlanEditor() {
           >
             Redo
           </button>
+          <div className="flex gap-1 bg-slate-700 rounded p-0.5 mr-2">
+            <button
+              onClick={() => setViewMode('2d')}
+              className={`px-3 py-1 rounded text-sm ${
+                viewMode === '2d'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              2D
+            </button>
+            <button
+              onClick={() => setViewMode('3d')}
+              className={`px-3 py-1 rounded text-sm ${
+                viewMode === '3d'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              3D
+            </button>
+          </div>
           <div className="w-px bg-slate-600 mx-1"></div>
           <button onClick={handleZoomOut} className="px-3 py-1 bg-slate-700 rounded text-white">-</button>
           <button onClick={handleZoomReset} className="px-3 py-1 bg-slate-700 rounded text-white">
@@ -1072,109 +1099,119 @@ export default function FloorPlanEditor() {
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Canvas */}
-        <div
-          className="lg:col-span-3 bg-slate-900 rounded-lg overflow-auto h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[600px] min-h-[300px]"
-          onWheel={handleWheel}
-          onMouseDown={handlePanStart}
-          onMouseMove={handlePanMove}
-          onMouseUp={handlePanEnd}
-          onMouseLeave={handlePanEnd}
-          style={{ cursor: spacebarDown ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
-        >
-          <svg
-            ref={svgRef}
-            width={canvasWidth}
-            height={canvasHeight}
-            className="cursor-crosshair"
-            onMouseDown={handleCanvasMouseDown}
-            onMouseMove={handleCanvasMouseMove}
-            onMouseUp={handleCanvasMouseUp}
-          >
-            {/* Background */}
-            <rect width={canvasWidth} height={canvasHeight} fill="#0f172a" />
-
-            {/* Transform group for padding and pan offset */}
-            <g transform={`translate(${50 + viewOffset.x}, ${50 + viewOffset.y})`}>
-              {/* Grid */}
-              <Grid
-                width={floorPlan.overall_dimensions.width * scale}
-                height={floorPlan.overall_dimensions.depth * scale}
-                gridSize={gridSize}
-                scale={scale}
-              />
-
-              {/* Building outline */}
-              <rect
-                x={0}
-                y={0}
-                width={floorPlan.overall_dimensions.width * scale}
-                height={floorPlan.overall_dimensions.depth * scale}
-                fill="none"
-                stroke="#475569"
-                strokeWidth={2}
-                strokeDasharray="10,5"
-              />
-
-              {/* Dimension labels */}
-              <text
-                x={floorPlan.overall_dimensions.width * scale / 2}
-                y={-10}
-                textAnchor="middle"
-                fill="#64748b"
-                fontSize={12}
+        <div className="lg:col-span-3 bg-slate-900 rounded-lg overflow-hidden h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[600px] min-h-[300px] relative">
+          {viewMode === '2d' ? (
+            <div
+              className="w-full h-full overflow-auto"
+              onWheel={handleWheel}
+              onMouseDown={handlePanStart}
+              onMouseMove={handlePanMove}
+              onMouseUp={handlePanEnd}
+              onMouseLeave={handlePanEnd}
+              style={{ cursor: spacebarDown ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
+            >
+              <svg
+                ref={svgRef}
+                width={canvasWidth}
+                height={canvasHeight}
+                className="cursor-crosshair absolute inset-0"
+                onMouseDown={handleCanvasMouseDown}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseUp={handleCanvasMouseUp}
               >
-                {(floorPlan.overall_dimensions.width / 1000).toFixed(2)}m
-              </text>
-              <text
-                x={-10}
-                y={floorPlan.overall_dimensions.depth * scale / 2}
-                textAnchor="middle"
-                fill="#64748b"
-                fontSize={12}
-                transform={`rotate(-90, -10, ${floorPlan.overall_dimensions.depth * scale / 2})`}
-              >
-                {(floorPlan.overall_dimensions.depth / 1000).toFixed(2)}m
-              </text>
+                {/* Background */}
+                <rect width={canvasWidth} height={canvasHeight} fill="#0f172a" />
 
-              {/* Alignment guides - rendered before rooms so they appear behind */}
-              <AlignmentGuides
-                guides={alignmentGuides}
-                scale={scale}
-                canvasWidth={floorPlan.overall_dimensions.width}
-                canvasHeight={floorPlan.overall_dimensions.depth}
-              />
+                {/* Transform group for padding and pan offset */}
+                <g transform={`translate(${50 + viewOffset.x}, ${50 + viewOffset.y})`}>
+                  {/* Grid */}
+                  <Grid
+                    width={floorPlan.overall_dimensions.width * scale}
+                    height={floorPlan.overall_dimensions.depth * scale}
+                    gridSize={gridSize}
+                    scale={scale}
+                  />
 
-              {/* Rooms */}
-              {floorPlan.rooms.map(room => (
-                <Room
-                  key={room.id}
-                  room={room}
-                  scale={scale}
-                  isSelected={selectedIds.includes(room.id)}
-                  onSelect={select}
-                  onToggleSelect={toggleSelect}
-                  onDrag={handleDragRoom}
-                  onResize={handleResizeRoom}
-                  onDragEnd={handleDragEnd}
-                />
-              ))}
+                  {/* Building outline */}
+                  <rect
+                    x={0}
+                    y={0}
+                    width={floorPlan.overall_dimensions.width * scale}
+                    height={floorPlan.overall_dimensions.depth * scale}
+                    fill="none"
+                    stroke="#475569"
+                    strokeWidth={2}
+                    strokeDasharray="10,5"
+                  />
 
-              {/* Selection box visual */}
-              {isBoxSelecting && (
-                <rect
-                  x={Math.min(boxStart.x, boxEnd.x) * scale}
-                  y={Math.min(boxStart.y, boxEnd.y) * scale}
-                  width={Math.abs(boxEnd.x - boxStart.x) * scale}
-                  height={Math.abs(boxEnd.y - boxStart.y) * scale}
-                  fill="rgba(59, 130, 246, 0.2)"
-                  stroke="#3b82f6"
-                  strokeWidth={1}
-                  strokeDasharray="4,4"
-                  style={{ pointerEvents: 'none' }}
-                />
-              )}
-            </g>
-          </svg>
+                  {/* Dimension labels */}
+                  <text
+                    x={floorPlan.overall_dimensions.width * scale / 2}
+                    y={-10}
+                    textAnchor="middle"
+                    fill="#64748b"
+                    fontSize={12}
+                  >
+                    {(floorPlan.overall_dimensions.width / 1000).toFixed(2)}m
+                  </text>
+                  <text
+                    x={-10}
+                    y={floorPlan.overall_dimensions.depth * scale / 2}
+                    textAnchor="middle"
+                    fill="#64748b"
+                    fontSize={12}
+                    transform={`rotate(-90, -10, ${floorPlan.overall_dimensions.depth * scale / 2})`}
+                  >
+                    {(floorPlan.overall_dimensions.depth / 1000).toFixed(2)}m
+                  </text>
+
+                  {/* Alignment guides - rendered before rooms so they appear behind */}
+                  <AlignmentGuides
+                    guides={alignmentGuides}
+                    scale={scale}
+                    canvasWidth={floorPlan.overall_dimensions.width}
+                    canvasHeight={floorPlan.overall_dimensions.depth}
+                  />
+
+                  {/* Rooms */}
+                  {floorPlan.rooms.map(room => (
+                    <Room
+                      key={room.id}
+                      room={room}
+                      scale={scale}
+                      isSelected={selectedIds.includes(room.id)}
+                      onSelect={select}
+                      onToggleSelect={toggleSelect}
+                      onDrag={handleDragRoom}
+                      onResize={handleResizeRoom}
+                      onDragEnd={handleDragEnd}
+                    />
+                  ))}
+
+                  {/* Selection box visual */}
+                  {isBoxSelecting && (
+                    <rect
+                      x={Math.min(boxStart.x, boxEnd.x) * scale}
+                      y={Math.min(boxStart.y, boxEnd.y) * scale}
+                      width={Math.abs(boxEnd.x - boxStart.x) * scale}
+                      height={Math.abs(boxEnd.y - boxStart.y) * scale}
+                      fill="rgba(59, 130, 246, 0.2)"
+                      stroke="#3b82f6"
+                      strokeWidth={1}
+                      strokeDasharray="4,4"
+                      style={{ pointerEvents: 'none' }}
+                    />
+                  )}
+                </g>
+              </svg>
+            </div>
+          ) : (
+            <FloorPlan3DView
+              floorPlan={floorPlan}
+              selectedRoomId={getFirstSelected()}
+              className="w-full h-full"
+            />
+          )}
         </div>
 
         {/* Properties panel - drawer on mobile, sidebar on desktop */}
