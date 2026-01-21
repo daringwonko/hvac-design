@@ -1,0 +1,394 @@
+{
+  "metadata": {
+    "project_name": "Goldilocks Home 3B-3B",
+    "version": "1.0.0",
+    "created_at": "2026-01-21T00:00:00Z",
+    "units": "millimeters",
+    "source": "SketchUp floor plan images",
+    "notes": "Linear modular layout with 3 bedrooms, 3 bathrooms"
+  },
+  "building": {
+    "overall_dimensions": {
+      "length_mm": 17850,
+      "width_mm": 7496,
+      "height_mm": 2743,
+      "area_sqm": 133.81
+    },
+    "orientation": "north_facing_entrance",
+    "construction_type": "modular"
+  },
+  "rooms": [
+    {
+      "id": "front_entrance",
+      "name": "Front Entrance",
+      "type": "entry",
+      "dimensions": {
+        "width_mm": 3045,
+        "depth_mm": 1355
+      },
+      "area_sqm": 4.13,
+      "position": {
+        "x_mm": 0,
+        "y_mm": 0,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_entry",
+        "heating_type": "radiant_floor",
+        "mini_split_btu": null,
+        "supply_cfm": 0,
+        "exhaust_cfm": 0
+      },
+      "features": ["exterior_door"]
+    },
+    {
+      "id": "powder_bathroom",
+      "name": "Powder Bathroom",
+      "type": "bathroom",
+      "dimensions": {
+        "width_mm": 1340,
+        "depth_mm": 1355
+      },
+      "area_sqm": 1.82,
+      "position": {
+        "x_mm": 3045,
+        "y_mm": 0,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_bath_powder",
+        "heating_type": "radiant_floor",
+        "mini_split_btu": null,
+        "supply_cfm": 0,
+        "exhaust_cfm": 25
+      },
+      "fixtures": [
+        {"type": "toilet", "width_mm": 380, "depth_mm": 650},
+        {"type": "vanity", "width_mm": 600, "depth_mm": 500}
+      ],
+      "features": ["exhaust_fan"]
+    },
+    {
+      "id": "laundry",
+      "name": "Laundry",
+      "type": "utility",
+      "dimensions": {
+        "width_mm": 1161,
+        "depth_mm": 935
+      },
+      "area_sqm": 1.09,
+      "position": {
+        "x_mm": 4385,
+        "y_mm": 0,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_utility",
+        "heating_type": "radiant_floor",
+        "mini_split_btu": null,
+        "supply_cfm": 0,
+        "exhaust_cfm": 0
+      },
+      "fixtures": [
+        {"type": "washer_dryer_stack", "width_mm": 610, "depth_mm": 685}
+      ],
+      "features": ["washer_hookup", "dryer_vent"]
+    },
+    {
+      "id": "living_room",
+      "name": "Living Room",
+      "type": "living",
+      "dimensions": {
+        "width_mm": 4614,
+        "depth_mm": 3000
+      },
+      "area_sqm": 13.84,
+      "position": {
+        "x_mm": 0,
+        "y_mm": 1355,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_living",
+        "heating_type": "radiant_plus_mini_split",
+        "mini_split_btu": 12000,
+        "mini_split_model": "Mitsubishi MSZ-FH12NA",
+        "mini_split_position": {"wall": "east", "height_mm": 2100},
+        "supply_cfm": 35,
+        "exhaust_cfm": 0
+      },
+      "features": ["open_to_kitchen", "primary_gathering_space"]
+    },
+    {
+      "id": "kitchen",
+      "name": "Kitchen",
+      "type": "kitchen",
+      "dimensions": {
+        "width_mm": 5630,
+        "depth_mm": 2980
+      },
+      "area_sqm": 16.78,
+      "position": {
+        "x_mm": 4614,
+        "y_mm": 1355,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_kitchen",
+        "heating_type": "radiant_floor",
+        "mini_split_btu": null,
+        "supply_cfm": 0,
+        "exhaust_cfm": 50
+      },
+      "fixtures": [
+        {"type": "range", "width_mm": 762, "depth_mm": 660, "requires_hood": true},
+        {"type": "refrigerator", "width_mm": 914, "depth_mm": 762},
+        {"type": "sink", "width_mm": 838, "depth_mm": 559},
+        {"type": "dishwasher", "width_mm": 610, "depth_mm": 610},
+        {"type": "island", "width_mm": 1500, "depth_mm": 900}
+      ],
+      "features": ["range_hood", "hrv_filter_location"]
+    },
+    {
+      "id": "master_bedroom",
+      "name": "Master Bedroom",
+      "type": "bedroom",
+      "dimensions": {
+        "width_mm": 2800,
+        "depth_mm": 5941
+      },
+      "area_sqm": 16.64,
+      "position": {
+        "x_mm": 15050,
+        "y_mm": 0,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_master",
+        "heating_type": "radiant_plus_mini_split",
+        "mini_split_btu": 9000,
+        "mini_split_model": "Mitsubishi MSZ-FH09NA",
+        "mini_split_position": {"wall": "west", "height_mm": 2100},
+        "supply_cfm": 25,
+        "exhaust_cfm": 0
+      },
+      "features": ["ensuite_bath", "walk_in_closet"]
+    },
+    {
+      "id": "master_bath",
+      "name": "Master Bath",
+      "type": "bathroom",
+      "dimensions": {
+        "total_width_mm": 4575,
+        "total_depth_mm": 1220
+      },
+      "area_sqm": 5.58,
+      "position": {
+        "x_mm": 13275,
+        "y_mm": 0,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_bath_master",
+        "heating_type": "radiant_floor",
+        "mini_split_btu": null,
+        "supply_cfm": 0,
+        "exhaust_cfm": 30
+      },
+      "fixtures": [
+        {"type": "tub", "width_mm": 1100, "depth_mm": 1100, "position": "west"},
+        {"type": "shower", "width_mm": 1100, "depth_mm": 1100, "position": "center_west"},
+        {"type": "vanity", "width_mm": 1460, "depth_mm": 1100, "position": "center_east"},
+        {"type": "toilet", "width_mm": 915, "depth_mm": 1220, "position": "east"}
+      ],
+      "features": ["exhaust_fan", "radiant_floor"]
+    },
+    {
+      "id": "bedroom_2",
+      "name": "Bedroom #2",
+      "type": "bedroom",
+      "dimensions": {
+        "width_mm": 5790,
+        "depth_mm": 2768
+      },
+      "area_sqm": 16.03,
+      "position": {
+        "x_mm": 0,
+        "y_mm": 4728,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_bed2",
+        "heating_type": "radiant_plus_mini_split",
+        "mini_split_btu": 6000,
+        "mini_split_model": "Mitsubishi MSZ-FH06NA",
+        "mini_split_position": {"wall": "east", "height_mm": 2100},
+        "supply_cfm": 20,
+        "exhaust_cfm": 0
+      },
+      "features": ["closet"]
+    },
+    {
+      "id": "mechanical_room",
+      "name": "Mechanical Room",
+      "type": "mechanical",
+      "dimensions": {
+        "width_mm": 2900,
+        "depth_mm": 1576
+      },
+      "area_sqm": 4.57,
+      "position": {
+        "x_mm": 5790,
+        "y_mm": 5920,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_mechanical",
+        "heating_type": "radiant_floor",
+        "mini_split_btu": null,
+        "supply_cfm": 0,
+        "exhaust_cfm": 0
+      },
+      "equipment": [
+        {"type": "electrical_panel", "model": "Square D Homeline 200A", "width_mm": 400, "depth_mm": 150},
+        {"type": "hrv", "model": "Panasonic Intelli-Balance 100", "width_mm": 600, "depth_mm": 400},
+        {"type": "radiant_manifold", "model": "Uponor EP 8-port", "width_mm": 500, "depth_mm": 150},
+        {"type": "water_heater", "model": "Rheem ProTerra 50gal", "width_mm": 560, "depth_mm": 560},
+        {"type": "water_filtration", "model": "Pentair Pelican PC600", "width_mm": 400, "depth_mm": 300}
+      ],
+      "features": ["floor_drain", "exterior_wall_access"]
+    },
+    {
+      "id": "bathroom_3",
+      "name": "Bathroom (Bed 3)",
+      "type": "bathroom",
+      "dimensions": {
+        "total_width_mm": 2690,
+        "total_depth_mm": 1576
+      },
+      "area_sqm": 4.24,
+      "position": {
+        "x_mm": 8690,
+        "y_mm": 5920,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_bath_3",
+        "heating_type": "radiant_floor",
+        "mini_split_btu": null,
+        "supply_cfm": 0,
+        "exhaust_cfm": 25
+      },
+      "fixtures": [
+        {"type": "toilet", "width_mm": 810, "depth_mm": 1576, "position": "west"},
+        {"type": "vanity", "width_mm": 929, "depth_mm": 1576, "position": "center"},
+        {"type": "shower", "width_mm": 951, "depth_mm": 1576, "position": "east"}
+      ],
+      "features": ["exhaust_fan"]
+    },
+    {
+      "id": "bedroom_3",
+      "name": "Bedroom #3",
+      "type": "bedroom",
+      "dimensions": {
+        "width_mm": 2890,
+        "depth_mm": 3426
+      },
+      "area_sqm": 9.90,
+      "position": {
+        "x_mm": 11380,
+        "y_mm": 4070,
+        "anchor": "top_left"
+      },
+      "hvac": {
+        "zone_id": "zone_bed3",
+        "heating_type": "radiant_plus_mini_split",
+        "mini_split_btu": 6000,
+        "mini_split_model": "Mitsubishi MSZ-FH06NA",
+        "mini_split_position": {"wall": "west", "height_mm": 2100},
+        "supply_cfm": 20,
+        "exhaust_cfm": 0
+      },
+      "features": ["closet"]
+    }
+  ],
+  "corridors": [
+    {
+      "id": "central_corridor",
+      "name": "Central Corridor",
+      "type": "corridor",
+      "width_mm": 900,
+      "segments": [
+        {"from": "living_room", "to": "kitchen", "length_mm": 6110},
+        {"from": "kitchen", "to": "bedroom_3", "length_mm": 2965}
+      ],
+      "hvac": {
+        "duct_chase": true,
+        "supply_diffusers": 0,
+        "heating_type": "radiant_floor"
+      }
+    }
+  ],
+  "hvac_system": {
+    "outdoor_unit": {
+      "model": "Mitsubishi MXZ-4C36NAHZ2",
+      "capacity_btu": 36000,
+      "type": "multi_zone_heat_pump",
+      "position": {"x_mm": 17850, "y_mm": 3500, "location": "exterior_east_wall"}
+    },
+    "hrv": {
+      "model": "Panasonic Intelli-Balance 100",
+      "cfm": 100,
+      "efficiency_percent": 80,
+      "location": "mechanical_room",
+      "filter_location": "kitchen_dead_space"
+    },
+    "radiant_floor": {
+      "manifold_model": "Uponor EP Heating Manifold 8-port",
+      "tubing_model": "Uponor hePEX 1/2\"",
+      "tubing_spacing_mm": 229,
+      "total_tubing_m": 305,
+      "zones": 8
+    },
+    "zones": [
+      {"id": "zone_master", "rooms": ["master_bedroom"], "thermostat": "Mysa Smart"},
+      {"id": "zone_bed2", "rooms": ["bedroom_2"], "thermostat": "Mysa Smart"},
+      {"id": "zone_bed3", "rooms": ["bedroom_3"], "thermostat": "Mysa Smart"},
+      {"id": "zone_living", "rooms": ["living_room", "kitchen"], "thermostat": "Mysa Smart"},
+      {"id": "zone_baths", "rooms": ["master_bath", "powder_bathroom", "bathroom_3"], "thermostat": "Tekmar"},
+      {"id": "zone_utility", "rooms": ["laundry", "mechanical_room", "front_entrance"], "thermostat": "Tekmar"}
+    ]
+  },
+  "electrical": {
+    "panel": {
+      "model": "Square D Homeline",
+      "amperage": 200,
+      "spaces": 40,
+      "location": "mechanical_room"
+    },
+    "circuits": [],
+    "outlets": [],
+    "switches": []
+  },
+  "plumbing": {
+    "water_heater": {
+      "model": "Rheem ProTerra 50gal",
+      "type": "heat_pump_hybrid",
+      "uef": 3.75,
+      "location": "mechanical_room"
+    },
+    "filtration": {
+      "model": "Pentair Pelican PC600",
+      "stages": 3,
+      "gpm": 10,
+      "location": "mechanical_room"
+    },
+    "wet_walls": [
+      {"id": "wet_wall_1", "serves": ["powder_bathroom", "kitchen"]},
+      {"id": "wet_wall_2", "serves": ["master_bath"]},
+      {"id": "wet_wall_3", "serves": ["bathroom_3", "laundry"]}
+    ],
+    "supply_lines": [],
+    "drain_lines": []
+  }
+}
