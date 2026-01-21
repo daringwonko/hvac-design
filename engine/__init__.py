@@ -30,12 +30,34 @@ from .core import (
     MATERIALS,
 )
 
+# Load Calculation Module (Sprint 002)
+from .design import (
+    LoadCalculationEngine,
+    BuildingSpecification,
+    LoadResult,
+    LoadWarning,
+    LoadCategory,
+    WarningSeverity,
+    ThresholdChecker,
+    get_default_thresholds,
+)
+
 __all__ = [
     '__version__',
+    # Core
     'CeilingPanelCalculator',
     'CeilingDimensions',
     'PanelSpacing',
     'Material',
     'PanelLayout',
     'MATERIALS',
+    # Load Calculation (Sprint 002)
+    'LoadCalculationEngine',
+    'BuildingSpecification',
+    'LoadResult',
+    'LoadWarning',
+    'LoadCategory',
+    'WarningSeverity',
+    'ThresholdChecker',
+    'get_default_thresholds',
 ]
