@@ -574,3 +574,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# Export class attributes at module level for convenient imports
+MATERIALS = MaterialLibrary.MATERIALS

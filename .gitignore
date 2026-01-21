@@ -31,3 +31,4 @@ coverage/
 *.swo
 __pycache__/
 *.pyc
+venv/

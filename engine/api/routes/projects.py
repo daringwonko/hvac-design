@@ -10,10 +10,8 @@ from flask import Blueprint, request, jsonify, g
 from ..middleware.auth import require_auth
 from ..middleware.rate_limit import rate_limit
 
-# Import SQLite database
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-from engine.core.project_database import ProjectDatabase
+# Import SQLite database - use relative import to avoid triggering engine/__init__.py
+from ...core.project_database import ProjectDatabase
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/api/v1')
 
