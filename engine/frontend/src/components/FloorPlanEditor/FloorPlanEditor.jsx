@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import useFloorPlanStore from '../../store/floorPlanStore'
 import useSelectionStore from '../../store/selectionStore'
 import { useFloorPlanPersistence } from '../../hooks/useLocalStorage'
+import { useKeyboardShortcuts, FLOOR_PLAN_SHORTCUTS } from '../../hooks/useKeyboardShortcuts'
+import KeyboardShortcutsModal from '../ui/KeyboardShortcutsModal'
 
 // Room type colors for visual distinction
 const ROOM_COLORS = {
@@ -552,6 +554,12 @@ export default function FloorPlanEditor() {
   // Each guide: { type: 'vertical'|'horizontal', position: number }
   const [alignmentGuides, setAlignmentGuides] = useState([])
 
+  // Clipboard state for copy/paste operations
+  const [clipboard, setClipboard] = useState([])
+
+  // Keyboard shortcuts modal state
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+
   // Canvas dimensions
   const canvasWidth = floorPlan.overall_dimensions.width * scale + 100
   const canvasHeight = floorPlan.overall_dimensions.depth * scale + 100
@@ -882,6 +890,69 @@ export default function FloorPlanEditor() {
     setAlignmentGuides([])
   }, [])
 
+  // Clipboard handlers for keyboard shortcuts
+  const handleCopy = useCallback(() => {
+    const selectedRooms = floorPlan.rooms.filter(r => selectedIds.includes(r.id))
+    if (selectedRooms.length > 0) {
+      setClipboard(selectedRooms.map(r => ({ ...r })))
+    }
+  }, [floorPlan.rooms, selectedIds])
+
+  const handlePaste = useCallback(() => {
+    if (clipboard.length === 0) return
+
+    const newRoomIds = []
+    clipboard.forEach((room, i) => {
+      const newRoom = {
+        ...room,
+        id: generateId(),
+        name: `${room.name} (copy)`,
+        position: {
+          x: room.position.x + gridSize * (i + 1),
+          y: room.position.y + gridSize * (i + 1)
+        }
+      }
+      addRoom(newRoom)
+      newRoomIds.push(newRoom.id)
+    })
+    selectMultiple(newRoomIds)
+  }, [clipboard, gridSize, addRoom, selectMultiple])
+
+  const handleCut = useCallback(() => {
+    handleCopy()
+    selectedIds.forEach(id => deleteRoom(id))
+    clearSelection()
+  }, [handleCopy, selectedIds, deleteRoom, clearSelection])
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIds.length === 0) return
+    selectedIds.forEach(id => deleteRoom(id))
+    clearSelection()
+  }, [selectedIds, deleteRoom, clearSelection])
+
+  const handleSelectAll = useCallback(() => {
+    selectMultiple(floorPlan.rooms.map(r => r.id))
+  }, [floorPlan.rooms, selectMultiple])
+
+  // Register keyboard shortcuts
+  useKeyboardShortcuts({
+    [FLOOR_PLAN_SHORTCUTS.undo]: handleUndo,
+    [FLOOR_PLAN_SHORTCUTS.redo]: handleRedo,
+    [FLOOR_PLAN_SHORTCUTS.redoAlt]: handleRedo,
+    [FLOOR_PLAN_SHORTCUTS.copy]: handleCopy,
+    [FLOOR_PLAN_SHORTCUTS.paste]: handlePaste,
+    [FLOOR_PLAN_SHORTCUTS.cut]: handleCut,
+    [FLOOR_PLAN_SHORTCUTS.delete]: handleDeleteSelected,
+    [FLOOR_PLAN_SHORTCUTS.deleteAlt]: handleDeleteSelected,
+    [FLOOR_PLAN_SHORTCUTS.selectAll]: handleSelectAll,
+    [FLOOR_PLAN_SHORTCUTS.deselect]: clearSelection,
+    [FLOOR_PLAN_SHORTCUTS.zoomIn]: handleZoomIn,
+    [FLOOR_PLAN_SHORTCUTS.zoomInAlt]: handleZoomIn,
+    [FLOOR_PLAN_SHORTCUTS.zoomOut]: handleZoomOut,
+    [FLOOR_PLAN_SHORTCUTS.zoomReset]: handleZoomReset,
+    [FLOOR_PLAN_SHORTCUTS.help]: () => setShowShortcutsModal(true),
+  })
+
   // Box selection handlers
   const handleCanvasMouseDown = (e) => {
     // Only start box select if clicking on background (not a room) and no spacebar (not panning)
@@ -979,6 +1050,13 @@ export default function FloorPlanEditor() {
             title="Reset zoom and pan"
           >
             Reset View
+          </button>
+          <button
+            onClick={() => setShowShortcutsModal(true)}
+            className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-white text-sm"
+            title="Keyboard Shortcuts (?)"
+          >
+            <span role="img" aria-label="Keyboard">Shortcuts</span>
           </button>
         </div>
       </div>
@@ -1164,6 +1242,12 @@ export default function FloorPlanEditor() {
           onClick={() => setPropertiesOpen(false)}
         />
       )}
+
+      {/* Keyboard shortcuts modal */}
+      <KeyboardShortcutsModal
+        isOpen={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+      />
     </div>
   )
 }
