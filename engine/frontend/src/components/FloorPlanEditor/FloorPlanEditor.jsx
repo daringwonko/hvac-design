@@ -4,7 +4,9 @@ import useSelectionStore from '../../store/selectionStore'
 import { useFloorPlanPersistence } from '../../hooks/useLocalStorage'
 import { useKeyboardShortcuts, FLOOR_PLAN_SHORTCUTS } from '../../hooks/useKeyboardShortcuts'
 import KeyboardShortcutsModal from '../ui/KeyboardShortcutsModal'
+import ConfirmDialog from '../ui/ConfirmDialog'
 import FloorPlan3DView from './FloorPlan3DView'
+import ImportDialog from '../ImportDialog/ImportDialog'
 
 // Room type colors for visual distinction
 const ROOM_COLORS = {
@@ -345,7 +347,7 @@ function AlignmentGuides({ guides, scale, canvasWidth, canvasHeight }) {
   )
 }
 
-function Toolbar({ onAddRoom, onDelete, onExport, selectedRoom }) {
+function Toolbar({ onAddRoom, onDelete, onExport, onImport, selectedRoom }) {
   const roomTypes = [
     'living', 'bedroom', 'kitchen', 'bathroom',
     'entry', 'corridor', 'utility', 'mechanical'
@@ -373,6 +375,12 @@ function Toolbar({ onAddRoom, onDelete, onExport, selectedRoom }) {
       </div>
 
       <div className="flex gap-2 ml-auto">
+        <button
+          onClick={onImport}
+          className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded"
+        >
+          Import DXF
+        </button>
         {selectedRoom && (
           <button
             onClick={onDelete}
@@ -396,7 +404,21 @@ function PropertiesPanel({ room, onUpdate }) {
   if (!room) {
     return (
       <div className="p-4 bg-slate-800 rounded-lg">
-        <p className="text-slate-400 text-sm">Select a room to edit properties</p>
+        <div className="text-center py-4">
+          <svg className="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+          </svg>
+          <p className="text-slate-400 text-sm font-medium mb-2">No room selected</p>
+          <p className="text-slate-500 text-xs">Click on a room in the canvas to view and edit its properties</p>
+          <div className="mt-3 text-left text-xs text-slate-500 space-y-1">
+            <p>Tips:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li>Click a room to select it</li>
+              <li>Ctrl+click to multi-select</li>
+              <li>Drag to reposition rooms</li>
+            </ul>
+          </div>
+        </div>
       </div>
     )
   }
@@ -564,6 +586,18 @@ export default function FloorPlanEditor() {
   // 2D/3D view mode state
   const [viewMode, setViewMode] = useState('2d') // '2d' | '3d'
 
+  // Import dialog state
+  const [showImportDialog, setShowImportDialog] = useState(false)
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'default'
+  })
+
   // Canvas dimensions
   const canvasWidth = floorPlan.overall_dimensions.width * scale + 100
   const canvasHeight = floorPlan.overall_dimensions.depth * scale + 100
@@ -627,12 +661,38 @@ export default function FloorPlanEditor() {
     select(newRoom.id)
   }
 
+  // Confirm dialog helpers
+  const showConfirmDialog = useCallback(({ title, message, onConfirm, variant = 'default' }) => {
+    setConfirmDialog({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      variant
+    })
+  }, [])
+
+  const closeConfirmDialog = useCallback(() => {
+    setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+  }, [])
+
   // Delete selected room
   const handleDeleteRoom = () => {
     const selectedId = getFirstSelected()
     if (!selectedId) return
-    deleteRoom(selectedId)
-    clearSelection()
+
+    const room = floorPlan.rooms.find(r => r.id === selectedId)
+
+    showConfirmDialog({
+      title: 'Delete Room?',
+      message: `Are you sure you want to delete "${room?.name || 'this room'}"? This action cannot be undone.`,
+      variant: 'danger',
+      onConfirm: () => {
+        deleteRoom(selectedId)
+        clearSelection()
+        closeConfirmDialog()
+      }
+    })
   }
 
   // Drag room
@@ -930,13 +990,32 @@ export default function FloorPlanEditor() {
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedIds.length === 0) return
-    selectedIds.forEach(id => deleteRoom(id))
-    clearSelection()
-  }, [selectedIds, deleteRoom, clearSelection])
+
+    const count = selectedIds.length
+
+    showConfirmDialog({
+      title: `Delete ${count} Room${count > 1 ? 's' : ''}?`,
+      message: `Are you sure you want to delete ${count} room${count > 1 ? 's' : ''}? This action cannot be undone.`,
+      variant: 'danger',
+      onConfirm: () => {
+        selectedIds.forEach(id => deleteRoom(id))
+        clearSelection()
+        closeConfirmDialog()
+      }
+    })
+  }, [selectedIds, deleteRoom, clearSelection, showConfirmDialog, closeConfirmDialog])
 
   const handleSelectAll = useCallback(() => {
     selectMultiple(floorPlan.rooms.map(r => r.id))
   }, [floorPlan.rooms, selectMultiple])
+
+  // Import handler
+  const handleImportComplete = useCallback((importedData) => {
+    // Add imported rooms to the floor plan
+    importedData.rooms?.forEach(room => {
+      addRoom(room)
+    })
+  }, [addRoom])
 
   // Register keyboard shortcuts
   useKeyboardShortcuts({
@@ -1026,6 +1105,27 @@ export default function FloorPlanEditor() {
             {selectedIds.length > 1 && ` (${selectedIds.length} selected)`}
           </p>
         </div>
+        {/* Save status indicator */}
+        <div className="flex items-center gap-2 text-sm mr-4">
+          {saveStatus === 'saving' && (
+            <span className="text-yellow-400 flex items-center gap-1">
+              <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+              Saving...
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="text-green-400 flex items-center gap-1">
+              <div className="w-2 h-2 bg-green-400 rounded-full" />
+              Saved
+            </span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="text-red-400 flex items-center gap-1">
+              <div className="w-2 h-2 bg-red-400 rounded-full" />
+              Save failed
+            </span>
+          )}
+        </div>
         <div className="flex gap-2">
           <button
             onClick={handleUndo}
@@ -1093,6 +1193,7 @@ export default function FloorPlanEditor() {
         onAddRoom={handleAddRoom}
         onDelete={handleDeleteRoom}
         onExport={handleExport}
+        onImport={() => setShowImportDialog(true)}
         selectedRoom={selectedRoom}
       />
 
@@ -1100,6 +1201,16 @@ export default function FloorPlanEditor() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Canvas */}
         <div className="lg:col-span-3 bg-slate-900 rounded-lg overflow-hidden h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[600px] min-h-[300px] relative">
+          {/* Empty state when no rooms */}
+          {floorPlan.rooms.length === 0 && viewMode === '2d' && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 z-10 pointer-events-none">
+              <svg className="w-16 h-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <p className="text-lg font-medium mb-2">No rooms yet</p>
+              <p className="text-sm">Click the toolbar buttons above to add your first room</p>
+            </div>
+          )}
           {viewMode === '2d' ? (
             <div
               className="w-full h-full overflow-auto"
@@ -1284,6 +1395,25 @@ export default function FloorPlanEditor() {
       <KeyboardShortcutsModal
         isOpen={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
+      />
+
+      {/* Import dialog */}
+      <ImportDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleImportComplete}
+      />
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
       />
     </div>
   )
