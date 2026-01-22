@@ -1,0 +1,716 @@
+{
+  "sprint_id": "SPRINT-004-UX-FIXES",
+  "sprint_name": "UX Excellence & Interaction Hierarchy - Fix Phase",
+  "created": "2026-01-21T23:30:00Z",
+  "based_on": "UX_SYNTHESIS_REPORT.json",
+
+  "agent_deployment_overview": {
+    "orchestrator": 1,
+    "deployment_strategist": 1,
+    "scouts": 10,
+    "fixers": 22,
+    "validators": 7,
+    "epo_human_advocacy": 7,
+    "git_commit": 7,
+    "synthesizer": 1,
+    "total_agents": 56
+  },
+
+  "context_budget": {
+    "estimated_total_tokens": "~420K",
+    "per_wave_average": "~60K",
+    "per_fixer_average": "~8K",
+    "per_validator_average": "~6K"
+  },
+
+  "file_locks": {
+    "description": "Prevents collision between parallel fixers",
+    "lock_strategy": "Wave-level isolation + task-level file assignment"
+  },
+
+  "waves": [
+    {
+      "wave_id": 1,
+      "name": "Critical Throttle & Resize Fix",
+      "priority": "P0 - IMMEDIATE",
+      "status": "pending",
+      "dependencies": [],
+
+      "agents": {
+        "fixers": [
+          {
+            "agent_id": "FIXER-001",
+            "task_id": "FIX-001",
+            "title": "Add trailing edge to throttle function",
+            "file_lock": "engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "line_range": "77-86",
+            "context_estimate": "10K tokens",
+            "inputs": ["SCOUT-001 report", "SCOUT-009 report"],
+            "output": "FIX_RESULT_001.json"
+          },
+          {
+            "agent_id": "FIXER-002",
+            "task_id": "FIX-002",
+            "title": "Use useRef for dragStart to prevent throttle recreation",
+            "file_lock": "engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "line_range": "170-180",
+            "context_estimate": "8K tokens",
+            "depends_on": "FIXER-001",
+            "inputs": ["SCOUT-001 report"],
+            "output": "FIX_RESULT_002.json"
+          },
+          {
+            "agent_id": "FIXER-003",
+            "task_id": "FIX-003",
+            "title": "Fix event listener dependency array",
+            "file_lock": "engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "line_range": "186-195",
+            "context_estimate": "8K tokens",
+            "depends_on": "FIXER-002",
+            "inputs": ["SCOUT-008 report"],
+            "output": "FIX_RESULT_003.json"
+          },
+          {
+            "agent_id": "FIXER-004",
+            "task_id": "FIX-004",
+            "title": "Fix persistence subscription stability",
+            "file_lock": "engine/frontend/src/hooks/useLocalStorage.js",
+            "line_range": "140-150",
+            "context_estimate": "8K tokens",
+            "inputs": ["SCOUT-004 report"],
+            "output": "FIX_RESULT_004.json"
+          }
+        ],
+        "validator": {
+          "agent_id": "VALIDATOR-W1",
+          "tests": [
+            "Resize room slowly → final position saved",
+            "Resize room quickly (<100ms) → final position saved",
+            "Rapid resize sequences → all positions accurate",
+            "Page refresh → floor plan persists"
+          ],
+          "context_estimate": "6K tokens",
+          "output": "VALIDATION_RESULT_W1.json"
+        },
+        "epo_human_advocacy": {
+          "agent_id": "EPO-W1",
+          "review_scope": [
+            "Throttle implementation correctness",
+            "No regression in drag performance",
+            "User delight: resize feels responsive"
+          ],
+          "context_estimate": "4K tokens",
+          "output": "ADVOCACY_REPORT_W1.json"
+        },
+        "git_commit": {
+          "agent_id": "GIT-W1",
+          "commit_message_template": "[Wave 1] Fix critical throttle bug causing resize data loss",
+          "files_to_stage": [
+            "engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+            "engine/frontend/src/hooks/useLocalStorage.js"
+          ],
+          "output": "COMMIT_RESULT_W1.json"
+        }
+      },
+
+      "execution_order": [
+        {"batch": 1, "agents": ["FIXER-001", "FIXER-004"], "parallel": true},
+        {"batch": 2, "agents": ["FIXER-002"], "parallel": false, "reason": "depends on FIXER-001"},
+        {"batch": 3, "agents": ["FIXER-003"], "parallel": false, "reason": "depends on FIXER-002"},
+        {"batch": 4, "agents": ["VALIDATOR-W1"], "parallel": false},
+        {"batch": 5, "agents": ["EPO-W1"], "parallel": false},
+        {"batch": 6, "agents": ["GIT-W1"], "parallel": false}
+      ],
+
+      "context_total": "44K tokens",
+      "estimated_duration": "4-6 hours"
+    },
+
+    {
+      "wave_id": 2,
+      "name": "Event Safety & Keyboard Guards",
+      "priority": "P0 - IMMEDIATE",
+      "status": "pending",
+      "dependencies": ["wave_1"],
+
+      "agents": {
+        "fixers": [
+          {
+            "agent_id": "FIXER-005",
+            "task_id": "FIX-005",
+            "title": "Add operation state guard to keyboard shortcuts",
+            "file_lock": "engine/frontend/src/hooks/useKeyboardShortcuts.js",
+            "line_range": "55-70",
+            "context_estimate": "8K tokens",
+            "inputs": ["SCOUT-008 report"],
+            "output": "FIX_RESULT_005.json"
+          },
+          {
+            "agent_id": "FIXER-006",
+            "task_id": "FIX-006",
+            "title": "Isolate modal Escape from selection clear",
+            "file_lock": "engine/frontend/src/hooks/useKeyboardShortcuts.js",
+            "line_range": "80-100",
+            "context_estimate": "8K tokens",
+            "depends_on": "FIXER-005",
+            "inputs": ["SCOUT-008 report"],
+            "output": "FIX_RESULT_006.json"
+          },
+          {
+            "agent_id": "FIXER-007",
+            "task_id": "FIX-007",
+            "title": "Fix idle-reset timer memory leak",
+            "file_lock": "engine/frontend/src/hooks/useLocalStorage.js",
+            "line_range": "45-60",
+            "context_estimate": "6K tokens",
+            "inputs": ["SCOUT-004 report"],
+            "output": "FIX_RESULT_007.json"
+          }
+        ],
+        "validator": {
+          "agent_id": "VALIDATOR-W2",
+          "tests": [
+            "Ctrl+Z during active resize → ignored",
+            "Ctrl+Z after resize completes → undo works",
+            "Open modal, press Escape → modal closes, selection preserved",
+            "Long session → no memory growth from timers"
+          ],
+          "context_estimate": "6K tokens",
+          "output": "VALIDATION_RESULT_W2.json"
+        },
+        "epo_human_advocacy": {
+          "agent_id": "EPO-W2",
+          "review_scope": [
+            "Keyboard shortcuts still work when expected",
+            "No accidental data loss from shortcuts",
+            "Memory leak properly fixed"
+          ],
+          "context_estimate": "4K tokens",
+          "output": "ADVOCACY_REPORT_W2.json"
+        },
+        "git_commit": {
+          "agent_id": "GIT-W2",
+          "commit_message_template": "[Wave 2] Add event safety guards and fix memory leak",
+          "files_to_stage": [
+            "engine/frontend/src/hooks/useKeyboardShortcuts.js",
+            "engine/frontend/src/hooks/useLocalStorage.js"
+          ],
+          "output": "COMMIT_RESULT_W2.json"
+        }
+      },
+
+      "execution_order": [
+        {"batch": 1, "agents": ["FIXER-005", "FIXER-007"], "parallel": true},
+        {"batch": 2, "agents": ["FIXER-006"], "parallel": false, "reason": "depends on FIXER-005"},
+        {"batch": 3, "agents": ["VALIDATOR-W2"], "parallel": false},
+        {"batch": 4, "agents": ["EPO-W2"], "parallel": false},
+        {"batch": 5, "agents": ["GIT-W2"], "parallel": false}
+      ],
+
+      "context_total": "32K tokens",
+      "estimated_duration": "3-4 hours"
+    },
+
+    {
+      "wave_id": 3,
+      "name": "Router State Management Upgrade",
+      "priority": "P0 - IMMEDIATE",
+      "status": "pending",
+      "dependencies": ["wave_2"],
+
+      "agents": {
+        "fixers": [
+          {
+            "agent_id": "FIXER-008",
+            "task_id": "FIX-008",
+            "title": "Create useHVACStore with zundo",
+            "file_lock": "engine/frontend/src/store/hvacStore.js",
+            "creates_new_file": true,
+            "context_estimate": "12K tokens",
+            "inputs": ["SCOUT-005 report", "floorPlanStore.js reference"],
+            "output": "FIX_RESULT_008.json"
+          },
+          {
+            "agent_id": "FIXER-009",
+            "task_id": "FIX-009",
+            "title": "Create useElectricalStore with zundo",
+            "file_lock": "engine/frontend/src/store/electricalStore.js",
+            "creates_new_file": true,
+            "context_estimate": "12K tokens",
+            "inputs": ["SCOUT-006 report", "floorPlanStore.js reference"],
+            "output": "FIX_RESULT_009.json"
+          },
+          {
+            "agent_id": "FIXER-010",
+            "task_id": "FIX-010",
+            "title": "Create usePlumbingStore with zundo",
+            "file_lock": "engine/frontend/src/store/plumbingStore.js",
+            "creates_new_file": true,
+            "context_estimate": "12K tokens",
+            "inputs": ["SCOUT-007 report", "floorPlanStore.js reference"],
+            "output": "FIX_RESULT_010.json"
+          },
+          {
+            "agent_id": "FIXER-011",
+            "task_id": "FIX-011",
+            "title": "Fix PlumbingRouter fixture drag",
+            "file_lock": "engine/frontend/src/components/PlumbingRouter/PlumbingRouter.jsx",
+            "line_range": "244-314",
+            "context_estimate": "10K tokens",
+            "depends_on": "FIXER-010",
+            "inputs": ["SCOUT-007 report"],
+            "output": "FIX_RESULT_011.json"
+          },
+          {
+            "agent_id": "FIXER-012",
+            "task_id": "FIX-012",
+            "title": "Fix PlumbingRouter pipe preview",
+            "file_lock": "engine/frontend/src/components/PlumbingRouter/PlumbingRouter.jsx",
+            "line_range": "893-904",
+            "context_estimate": "8K tokens",
+            "depends_on": "FIXER-011",
+            "inputs": ["SCOUT-007 report"],
+            "output": "FIX_RESULT_012.json"
+          }
+        ],
+        "validator": {
+          "agent_id": "VALIDATOR-W3",
+          "tests": [
+            "HVAC: Ctrl+Z undoes equipment placement",
+            "HVAC: Ctrl+Y redoes undone action",
+            "Electrical: Ctrl+Z undoes wire drawing",
+            "Plumbing: Fixture drag works correctly",
+            "Plumbing: Pipe preview follows cursor",
+            "All routers: State persists on refresh"
+          ],
+          "context_estimate": "8K tokens",
+          "output": "VALIDATION_RESULT_W3.json"
+        },
+        "epo_human_advocacy": {
+          "agent_id": "EPO-W3",
+          "review_scope": [
+            "Undo/redo provides user confidence",
+            "State management matches Floor Plan quality",
+            "No data loss scenarios remain",
+            "Plumbing drag matches HVAC/Electrical UX"
+          ],
+          "context_estimate": "5K tokens",
+          "output": "ADVOCACY_REPORT_W3.json"
+        },
+        "git_commit": {
+          "agent_id": "GIT-W3",
+          "commit_message_template": "[Wave 3] Add Zustand stores with undo/redo to all routers",
+          "files_to_stage": [
+            "engine/frontend/src/store/hvacStore.js",
+            "engine/frontend/src/store/electricalStore.js",
+            "engine/frontend/src/store/plumbingStore.js",
+            "engine/frontend/src/components/PlumbingRouter/PlumbingRouter.jsx"
+          ],
+          "output": "COMMIT_RESULT_W3.json"
+        }
+      },
+
+      "execution_order": [
+        {"batch": 1, "agents": ["FIXER-008", "FIXER-009", "FIXER-010"], "parallel": true},
+        {"batch": 2, "agents": ["FIXER-011"], "parallel": false, "reason": "needs store first"},
+        {"batch": 3, "agents": ["FIXER-012"], "parallel": false, "reason": "same file as FIXER-011"},
+        {"batch": 4, "agents": ["VALIDATOR-W3"], "parallel": false},
+        {"batch": 5, "agents": ["EPO-W3"], "parallel": false},
+        {"batch": 6, "agents": ["GIT-W3"], "parallel": false}
+      ],
+
+      "context_total": "67K tokens",
+      "estimated_duration": "8-12 hours"
+    },
+
+    {
+      "wave_id": 4,
+      "name": "Tool State Coordination",
+      "priority": "P1 - HIGH",
+      "status": "pending",
+      "dependencies": ["wave_3"],
+
+      "agents": {
+        "fixers": [
+          {
+            "agent_id": "FIXER-013",
+            "task_id": "FIX-013",
+            "title": "Sync tool state with drawing mode in HVAC",
+            "file_lock": "engine/frontend/src/components/HVACRouter/HVACRouter.jsx",
+            "context_estimate": "10K tokens",
+            "inputs": ["SCOUT-005 report", "hvacStore.js"],
+            "output": "FIX_RESULT_013.json"
+          },
+          {
+            "agent_id": "FIXER-014",
+            "task_id": "FIX-014",
+            "title": "Sync tool state with wire drawing in Electrical",
+            "file_lock": "engine/frontend/src/components/ElectricalRouter/ElectricalRouter.jsx",
+            "context_estimate": "10K tokens",
+            "inputs": ["SCOUT-006 report", "electricalStore.js"],
+            "output": "FIX_RESULT_014.json"
+          },
+          {
+            "agent_id": "FIXER-015",
+            "task_id": "FIX-015",
+            "title": "Sync tool state with pipe drawing in Plumbing",
+            "file_lock": "engine/frontend/src/components/PlumbingRouter/PlumbingRouter.jsx",
+            "context_estimate": "10K tokens",
+            "inputs": ["SCOUT-007 report", "plumbingStore.js"],
+            "output": "FIX_RESULT_015.json"
+          },
+          {
+            "agent_id": "FIXER-016",
+            "task_id": "FIX-016",
+            "title": "Add throttling to all router drag operations",
+            "file_lock": "engine/frontend/src/utils/throttle.js",
+            "creates_new_file": true,
+            "context_estimate": "8K tokens",
+            "inputs": ["Fixed throttle from Wave 1"],
+            "output": "FIX_RESULT_016.json"
+          }
+        ],
+        "validator": {
+          "agent_id": "VALIDATOR-W4",
+          "tests": [
+            "HVAC: Switch tool during duct draw → drawing cancelled",
+            "Electrical: Switch tool during wire draw → drawing cancelled",
+            "Plumbing: Switch tool during pipe draw → drawing cancelled",
+            "All routers: Drag uses throttle correctly"
+          ],
+          "context_estimate": "6K tokens",
+          "output": "VALIDATION_RESULT_W4.json"
+        },
+        "epo_human_advocacy": {
+          "agent_id": "EPO-W4",
+          "review_scope": [
+            "Tool switching feels natural",
+            "No orphaned drawing states",
+            "Consistent behavior across all routers"
+          ],
+          "context_estimate": "4K tokens",
+          "output": "ADVOCACY_REPORT_W4.json"
+        },
+        "git_commit": {
+          "agent_id": "GIT-W4",
+          "commit_message_template": "[Wave 4] Synchronize tool state and add shared throttle utility",
+          "files_to_stage": [
+            "engine/frontend/src/components/HVACRouter/HVACRouter.jsx",
+            "engine/frontend/src/components/ElectricalRouter/ElectricalRouter.jsx",
+            "engine/frontend/src/components/PlumbingRouter/PlumbingRouter.jsx",
+            "engine/frontend/src/utils/throttle.js"
+          ],
+          "output": "COMMIT_RESULT_W4.json"
+        }
+      },
+
+      "execution_order": [
+        {"batch": 1, "agents": ["FIXER-016"], "parallel": false, "reason": "creates shared utility"},
+        {"batch": 2, "agents": ["FIXER-013", "FIXER-014", "FIXER-015"], "parallel": true},
+        {"batch": 3, "agents": ["VALIDATOR-W4"], "parallel": false},
+        {"batch": 4, "agents": ["EPO-W4"], "parallel": false},
+        {"batch": 5, "agents": ["GIT-W4"], "parallel": false}
+      ],
+
+      "context_total": "48K tokens",
+      "estimated_duration": "4-6 hours"
+    },
+
+    {
+      "wave_id": 5,
+      "name": "3D Interactivity Foundation",
+      "priority": "P2 - MEDIUM",
+      "status": "pending",
+      "dependencies": ["wave_4"],
+
+      "agents": {
+        "fixers": [
+          {
+            "agent_id": "FIXER-017",
+            "task_id": "FIX-017",
+            "title": "Add direct Zustand subscription to 3D view",
+            "file_lock": "engine/frontend/src/components/FloorPlanEditor/FloorPlan3DView.jsx",
+            "context_estimate": "8K tokens",
+            "inputs": ["SCOUT-003 report", "floorPlanStore.js"],
+            "output": "FIX_RESULT_017.json"
+          },
+          {
+            "agent_id": "FIXER-018",
+            "task_id": "FIX-018",
+            "title": "Add room selection in 3D view",
+            "file_lock": "engine/frontend/src/components/FloorPlanEditor/Room3D.jsx",
+            "context_estimate": "10K tokens",
+            "depends_on": "FIXER-017",
+            "inputs": ["SCOUT-003 report", "selectionStore.js"],
+            "output": "FIX_RESULT_018.json"
+          },
+          {
+            "agent_id": "FIXER-019",
+            "task_id": "FIX-019",
+            "title": "Create shared coordinate transformation utility",
+            "file_lock": "engine/frontend/src/utils/coordinates.js",
+            "creates_new_file": true,
+            "context_estimate": "8K tokens",
+            "inputs": ["SCOUT-003 report"],
+            "output": "FIX_RESULT_019.json"
+          }
+        ],
+        "validator": {
+          "agent_id": "VALIDATOR-W5",
+          "tests": [
+            "3D view subscribes directly to store",
+            "Click room in 3D → room selected",
+            "Edit room in 2D → 3D updates immediately",
+            "Coordinate transforms are consistent"
+          ],
+          "context_estimate": "6K tokens",
+          "output": "VALIDATION_RESULT_W5.json"
+        },
+        "epo_human_advocacy": {
+          "agent_id": "EPO-W5",
+          "review_scope": [
+            "3D selection feels natural",
+            "2D/3D sync provides user confidence",
+            "Foundation ready for future 3D editing"
+          ],
+          "context_estimate": "4K tokens",
+          "output": "ADVOCACY_REPORT_W5.json"
+        },
+        "git_commit": {
+          "agent_id": "GIT-W5",
+          "commit_message_template": "[Wave 5] Add 3D interactivity and coordinate utilities",
+          "files_to_stage": [
+            "engine/frontend/src/components/FloorPlanEditor/FloorPlan3DView.jsx",
+            "engine/frontend/src/components/FloorPlanEditor/Room3D.jsx",
+            "engine/frontend/src/utils/coordinates.js"
+          ],
+          "output": "COMMIT_RESULT_W5.json"
+        }
+      },
+
+      "execution_order": [
+        {"batch": 1, "agents": ["FIXER-017", "FIXER-019"], "parallel": true},
+        {"batch": 2, "agents": ["FIXER-018"], "parallel": false, "reason": "depends on FIXER-017"},
+        {"batch": 3, "agents": ["VALIDATOR-W5"], "parallel": false},
+        {"batch": 4, "agents": ["EPO-W5"], "parallel": false},
+        {"batch": 5, "agents": ["GIT-W5"], "parallel": false}
+      ],
+
+      "context_total": "36K tokens",
+      "estimated_duration": "6-8 hours"
+    },
+
+    {
+      "wave_id": 6,
+      "name": "Backend Integration",
+      "priority": "P1 - HIGH",
+      "status": "pending",
+      "dependencies": ["wave_5"],
+
+      "agents": {
+        "fixers": [
+          {
+            "agent_id": "FIXER-020",
+            "task_id": "FIX-020",
+            "title": "Migrate backend floor plan to SQLite",
+            "file_lock": "engine/api/routes/floor_plan.py",
+            "context_estimate": "12K tokens",
+            "inputs": ["SCOUT-010 report"],
+            "output": "FIX_RESULT_020.json"
+          },
+          {
+            "agent_id": "FIXER-021",
+            "task_id": "FIX-021",
+            "title": "Add floor plan API methods to client",
+            "file_lock": "engine/frontend/src/api/client.js",
+            "context_estimate": "8K tokens",
+            "depends_on": "FIXER-020",
+            "inputs": ["SCOUT-010 report", "API spec"],
+            "output": "FIX_RESULT_021.json"
+          },
+          {
+            "agent_id": "FIXER-022",
+            "task_id": "FIX-022",
+            "title": "Implement dual-save with backend sync",
+            "file_lock": "engine/frontend/src/hooks/useLocalStorage.js",
+            "context_estimate": "10K tokens",
+            "depends_on": "FIXER-021",
+            "inputs": ["SCOUT-010 report", "SCOUT-004 report"],
+            "output": "FIX_RESULT_022.json"
+          }
+        ],
+        "validator": {
+          "agent_id": "VALIDATOR-W6",
+          "tests": [
+            "Save floor plan → persists to backend",
+            "Load floor plan → retrieves from backend",
+            "Offline mode → falls back to localStorage",
+            "Backend restart → data persists in SQLite"
+          ],
+          "context_estimate": "6K tokens",
+          "output": "VALIDATION_RESULT_W6.json"
+        },
+        "epo_human_advocacy": {
+          "agent_id": "EPO-W6",
+          "review_scope": [
+            "Data never lost in any scenario",
+            "Sync conflicts handled gracefully",
+            "User has confidence in save system"
+          ],
+          "context_estimate": "4K tokens",
+          "output": "ADVOCACY_REPORT_W6.json"
+        },
+        "git_commit": {
+          "agent_id": "GIT-W6",
+          "commit_message_template": "[Wave 6] Add backend persistence with dual-save sync",
+          "files_to_stage": [
+            "engine/api/routes/floor_plan.py",
+            "engine/frontend/src/api/client.js",
+            "engine/frontend/src/hooks/useLocalStorage.js"
+          ],
+          "output": "COMMIT_RESULT_W6.json"
+        }
+      },
+
+      "execution_order": [
+        {"batch": 1, "agents": ["FIXER-020"], "parallel": false},
+        {"batch": 2, "agents": ["FIXER-021"], "parallel": false, "reason": "needs backend API first"},
+        {"batch": 3, "agents": ["FIXER-022"], "parallel": false, "reason": "needs client methods first"},
+        {"batch": 4, "agents": ["VALIDATOR-W6"], "parallel": false},
+        {"batch": 5, "agents": ["EPO-W6"], "parallel": false},
+        {"batch": 6, "agents": ["GIT-W6"], "parallel": false}
+      ],
+
+      "context_total": "40K tokens",
+      "estimated_duration": "12-16 hours"
+    },
+
+    {
+      "wave_id": 7,
+      "name": "Final Validation & Synthesis",
+      "priority": "P0 - REQUIRED",
+      "status": "pending",
+      "dependencies": ["wave_6"],
+
+      "agents": {
+        "validators": [
+          {
+            "agent_id": "VALIDATOR-FINAL-1",
+            "scope": "Floor Plan Editor - Full Regression",
+            "tests": [
+              "All resize operations save correctly",
+              "Undo/redo works for all operations",
+              "2D/3D sync is bidirectional",
+              "Persistence works across sessions"
+            ],
+            "context_estimate": "8K tokens"
+          },
+          {
+            "agent_id": "VALIDATOR-FINAL-2",
+            "scope": "All Routers - Undo/Redo",
+            "tests": [
+              "HVAC: Full undo/redo test suite",
+              "Electrical: Full undo/redo test suite",
+              "Plumbing: Full undo/redo test suite"
+            ],
+            "context_estimate": "8K tokens"
+          },
+          {
+            "agent_id": "VALIDATOR-FINAL-3",
+            "scope": "Integration - Cross-Module",
+            "tests": [
+              "Navigate between modules → state preserved",
+              "Keyboard shortcuts work consistently",
+              "No memory leaks in extended session"
+            ],
+            "context_estimate": "6K tokens"
+          }
+        ],
+        "synthesizer": {
+          "agent_id": "SYNTHESIZER-FINAL",
+          "inputs": [
+            "All VALIDATION_RESULT files",
+            "All ADVOCACY_REPORT files",
+            "All COMMIT_RESULT files"
+          ],
+          "output": "SPRINT_004_STATUS_REPORT.json",
+          "context_estimate": "12K tokens"
+        },
+        "epo_human_advocacy": {
+          "agent_id": "EPO-FINAL",
+          "review_scope": [
+            "All user delight criteria met",
+            "No technical debt introduced",
+            "Production readiness assessment"
+          ],
+          "veto_power": true,
+          "context_estimate": "6K tokens",
+          "output": "FINAL_ADVOCACY_REPORT.json"
+        },
+        "git_commit": {
+          "agent_id": "GIT-FINAL",
+          "commit_message_template": "[Sprint 004] Final validation complete - UX Excellence achieved",
+          "creates_tag": "sprint-004-ux-complete",
+          "output": "FINAL_COMMIT_RESULT.json"
+        }
+      },
+
+      "execution_order": [
+        {"batch": 1, "agents": ["VALIDATOR-FINAL-1", "VALIDATOR-FINAL-2", "VALIDATOR-FINAL-3"], "parallel": true},
+        {"batch": 2, "agents": ["SYNTHESIZER-FINAL"], "parallel": false},
+        {"batch": 3, "agents": ["EPO-FINAL"], "parallel": false},
+        {"batch": 4, "agents": ["GIT-FINAL"], "parallel": false}
+      ],
+
+      "context_total": "40K tokens",
+      "estimated_duration": "4-6 hours"
+    }
+  ],
+
+  "checkpoint_schema": {
+    "sprint_id": "SPRINT-004-UX-FIXES",
+    "current_wave": 0,
+    "waves_completed": [],
+    "waves_remaining": [1, 2, 3, 4, 5, 6, 7],
+    "agents_deployed": 0,
+    "agents_succeeded": 0,
+    "agents_failed": 0,
+    "escalations_pending": 0,
+    "git_commits": [],
+    "last_updated": null
+  },
+
+  "escalation_triggers": [
+    "Any Fixer fails 2x on same task → escalate to Main Context",
+    "Validator finds regression → trigger Failure Scout + EPO review",
+    "EPO vetos merge → escalate to Main Context with recommendation",
+    "Git conflict cannot be auto-resolved → escalate to Main Context"
+  ],
+
+  "success_criteria": {
+    "must_pass": [
+      "100% of resize operations capture final position",
+      "Undo/redo works in all 4 editors (Floor Plan, HVAC, Electrical, Plumbing)",
+      "Zero keyboard shortcuts fire during active drag/resize",
+      "Zero data loss on page refresh",
+      "3D view syncs with 2D edits"
+    ],
+    "should_pass": [
+      "3D room selection works",
+      "Backend persistence operational",
+      "Memory usage stable over extended session"
+    ]
+  },
+
+  "total_summary": {
+    "waves": 7,
+    "total_fixers": 22,
+    "total_validators": 10,
+    "total_epo_agents": 7,
+    "total_git_agents": 7,
+    "synthesizers": 1,
+    "grand_total_agents": 56,
+    "estimated_context": "~420K tokens",
+    "estimated_duration": "42-58 hours of agent work"
+  }
+}
