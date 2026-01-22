@@ -1,0 +1,368 @@
+{
+  "synthesis_id": "SPRINT-004-UX-SYNTHESIS",
+  "generated": "2026-01-21T23:00:00Z",
+  "scouts_deployed": 10,
+  "scouts_completed": 10,
+
+  "executive_summary": {
+    "resize_bug_root_cause": "IDENTIFIED - Throttle using leading-edge-only loses final position",
+    "last_action_truth": "CORRECTLY IMPLEMENTED in Floor Plan, but throttle bug masks it",
+    "critical_issues": 12,
+    "high_issues": 15,
+    "medium_issues": 18,
+    "production_blockers": 6
+  },
+
+  "root_cause_analysis": {
+    "primary_bug": {
+      "symptom": "Room resize shows 'saving' but dimensions don't change",
+      "root_cause": "Throttle implementation uses LEADING EDGE ONLY with no trailing edge",
+      "mechanism": "Final mouse position lost when mouseup fires during 16ms throttle cooldown",
+      "location": "FloorPlanEditor.jsx:77-86",
+      "confidence": "95%+",
+      "fix_effort": "2-3 hours"
+    },
+    "contributing_factors": [
+      {
+        "factor": "useMemo dependency on 'dragStart' causes throttle recreation",
+        "location": "FloorPlanEditor.jsx:173",
+        "impact": "Throttle state machine reset on every mouse move"
+      },
+      {
+        "factor": "Subscription re-creation in useFloorPlanPersistence",
+        "location": "useLocalStorage.js:144",
+        "impact": "Subscription gaps during rapid updates"
+      },
+      {
+        "factor": "Event listener removal/re-addition during drag",
+        "location": "FloorPlanEditor.jsx:186-195",
+        "impact": "Potential missed mousemove events"
+      }
+    ]
+  },
+
+  "issues_by_category": {
+    "throttle_debounce": {
+      "severity": "CRITICAL",
+      "issues": [
+        "Leading-edge-only throttle loses final position (SCOUT-009)",
+        "dragStart in useMemo deps causes throttle recreation (SCOUT-001)",
+        "16ms interval may be too long for precision (SCOUT-009)",
+        "Memory leak: idle-reset timer not tracked (SCOUT-004)"
+      ],
+      "affected_modules": ["FloorPlanEditor"],
+      "fix_priority": "P0 - IMMEDIATE"
+    },
+    "state_management": {
+      "severity": "CRITICAL",
+      "issues": [
+        "HVAC/Electrical/Plumbing use scattered useState, no Zustand (SCOUT-005/006/007)",
+        "No undo/redo in HVAC/Electrical/Plumbing (SCOUT-005/006/007)",
+        "Subscription re-creation gaps (SCOUT-004)",
+        "No persistence for HVAC/Electrical/Plumbing designs (SCOUT-005/006/007)"
+      ],
+      "affected_modules": ["HVACRouter", "ElectricalRouter", "PlumbingRouter"],
+      "fix_priority": "P0 - IMMEDIATE"
+    },
+    "event_handling": {
+      "severity": "CRITICAL",
+      "issues": [
+        "Keyboard shortcuts fire during drag/resize (SCOUT-008)",
+        "No global event priority system (SCOUT-008)",
+        "Escape key conflict between modal and selection clear (SCOUT-008)",
+        "Tool state not synced with component behavior (SCOUT-005/006)"
+      ],
+      "affected_modules": ["FloorPlanEditor", "All Routers"],
+      "fix_priority": "P1 - HIGH"
+    },
+    "3d_integration": {
+      "severity": "HIGH",
+      "issues": [
+        "3D view is read-only, no interaction (SCOUT-003)",
+        "One-way sync only (2D→3D) (SCOUT-003)",
+        "No room selection in 3D (SCOUT-003)",
+        "Props-based data flow instead of direct store subscription (SCOUT-003)"
+      ],
+      "affected_modules": ["FloorPlan3DView", "Room3D"],
+      "fix_priority": "P2 - MEDIUM"
+    },
+    "backend_integration": {
+      "severity": "CRITICAL",
+      "issues": [
+        "Floor plans saved to localStorage ONLY (SCOUT-010)",
+        "Backend API endpoints exist but unused (SCOUT-010)",
+        "Backend uses in-memory storage (SCOUT-010)",
+        "No sync mechanism between frontend/backend (SCOUT-010)"
+      ],
+      "affected_modules": ["API Client", "useLocalStorage"],
+      "fix_priority": "P1 - HIGH"
+    },
+    "module_specific": {
+      "plumbing_router": {
+        "severity": "CRITICAL",
+        "issues": [
+          "Fixture drag completely broken - no mousemove handler (SCOUT-007)",
+          "Pipe drawing preview invisible - no cursor tracking (SCOUT-007)"
+        ]
+      },
+      "electrical_router": {
+        "severity": "HIGH",
+        "issues": [
+          "Wire drawing state not cancelled on tool change (SCOUT-006)",
+          "No throttling on drag operations (SCOUT-006)"
+        ]
+      },
+      "hvac_router": {
+        "severity": "HIGH",
+        "issues": [
+          "Tool switch during drag causes undefined behavior (SCOUT-005)",
+          "Click-to-select conflicts with duct drawing (SCOUT-005)"
+        ]
+      }
+    }
+  },
+
+  "fix_wave_plan": {
+    "wave_1": {
+      "name": "Critical Throttle & Resize Fix",
+      "priority": "P0 - IMMEDIATE",
+      "estimated_effort": "4-6 hours",
+      "agents_needed": 4,
+      "tasks": [
+        {
+          "task_id": "FIX-001",
+          "title": "Add trailing edge to throttle function",
+          "file": "FloorPlanEditor.jsx:77-86",
+          "description": "Rewrite throttle to capture pending args and execute after cooldown",
+          "effort": "1 hour"
+        },
+        {
+          "task_id": "FIX-002",
+          "title": "Remove dragStart from useMemo dependencies",
+          "file": "FloorPlanEditor.jsx:173",
+          "description": "Use useRef for dragStart to prevent throttle recreation",
+          "effort": "30 minutes"
+        },
+        {
+          "task_id": "FIX-003",
+          "title": "Fix event listener dependency array",
+          "file": "FloorPlanEditor.jsx:189-195",
+          "description": "Remove throttledMouseMove from effect deps after FIX-002",
+          "effort": "30 minutes"
+        },
+        {
+          "task_id": "FIX-004",
+          "title": "Fix persistence subscription stability",
+          "file": "useLocalStorage.js:144",
+          "description": "Remove setValue from subscription effect dependencies",
+          "effort": "1 hour"
+        }
+      ]
+    },
+    "wave_2": {
+      "name": "Event Safety & Keyboard Guards",
+      "priority": "P0 - IMMEDIATE",
+      "estimated_effort": "3-4 hours",
+      "agents_needed": 3,
+      "tasks": [
+        {
+          "task_id": "FIX-005",
+          "title": "Add operation state guard to keyboard shortcuts",
+          "file": "useKeyboardShortcuts.js:59",
+          "description": "Skip shortcuts when isDragging or isResizing",
+          "effort": "1 hour"
+        },
+        {
+          "task_id": "FIX-006",
+          "title": "Isolate modal Escape from selection clear",
+          "file": "useKeyboardShortcuts.js + modals",
+          "description": "Don't clear selection if modal is open",
+          "effort": "1 hour"
+        },
+        {
+          "task_id": "FIX-007",
+          "title": "Fix idle-reset timer memory leak",
+          "file": "useLocalStorage.js:50",
+          "description": "Track idle timer in separate ref for cleanup",
+          "effort": "30 minutes"
+        }
+      ]
+    },
+    "wave_3": {
+      "name": "Router State Management Upgrade",
+      "priority": "P0 - IMMEDIATE",
+      "estimated_effort": "8-12 hours",
+      "agents_needed": 6,
+      "tasks": [
+        {
+          "task_id": "FIX-008",
+          "title": "Create useHVACStore with zundo",
+          "file": "NEW: store/hvacStore.js",
+          "description": "Migrate HVACRouter to Zustand with temporal middleware",
+          "effort": "3 hours"
+        },
+        {
+          "task_id": "FIX-009",
+          "title": "Create useElectricalStore with zundo",
+          "file": "NEW: store/electricalStore.js",
+          "description": "Migrate ElectricalRouter to Zustand with temporal middleware",
+          "effort": "3 hours"
+        },
+        {
+          "task_id": "FIX-010",
+          "title": "Create usePlumbingStore with zundo",
+          "file": "NEW: store/plumbingStore.js",
+          "description": "Migrate PlumbingRouter to Zustand with temporal middleware",
+          "effort": "3 hours"
+        },
+        {
+          "task_id": "FIX-011",
+          "title": "Fix PlumbingRouter fixture drag",
+          "file": "PlumbingRouter.jsx:244-314",
+          "description": "Add complete drag handlers matching HVAC pattern",
+          "effort": "2 hours"
+        },
+        {
+          "task_id": "FIX-012",
+          "title": "Fix PlumbingRouter pipe preview",
+          "file": "PlumbingRouter.jsx:893-904",
+          "description": "Add cursor tracking for pipe drawing preview",
+          "effort": "2 hours"
+        }
+      ]
+    },
+    "wave_4": {
+      "name": "Tool State Coordination",
+      "priority": "P1 - HIGH",
+      "estimated_effort": "4-6 hours",
+      "agents_needed": 4,
+      "tasks": [
+        {
+          "task_id": "FIX-013",
+          "title": "Sync tool state with drawing mode in HVAC",
+          "file": "HVACRouter.jsx",
+          "description": "Cancel duct drawing when tool changes",
+          "effort": "1.5 hours"
+        },
+        {
+          "task_id": "FIX-014",
+          "title": "Sync tool state with wire drawing in Electrical",
+          "file": "ElectricalRouter.jsx",
+          "description": "Cancel wire drawing when tool changes",
+          "effort": "1.5 hours"
+        },
+        {
+          "task_id": "FIX-015",
+          "title": "Sync tool state with pipe drawing in Plumbing",
+          "file": "PlumbingRouter.jsx",
+          "description": "Cancel pipe drawing when tool changes",
+          "effort": "1.5 hours"
+        },
+        {
+          "task_id": "FIX-016",
+          "title": "Add throttling to all router drag operations",
+          "file": "All Routers",
+          "description": "Apply consistent throttle pattern",
+          "effort": "2 hours"
+        }
+      ]
+    },
+    "wave_5": {
+      "name": "3D Interactivity Foundation",
+      "priority": "P2 - MEDIUM",
+      "estimated_effort": "6-8 hours",
+      "agents_needed": 3,
+      "tasks": [
+        {
+          "task_id": "FIX-017",
+          "title": "Add direct Zustand subscription to 3D view",
+          "file": "FloorPlan3DView.jsx",
+          "description": "Replace props with useFloorPlanStore hook",
+          "effort": "1 hour"
+        },
+        {
+          "task_id": "FIX-018",
+          "title": "Add room selection in 3D view",
+          "file": "Room3D.jsx",
+          "description": "Wire up onClick to selectionStore",
+          "effort": "2 hours"
+        },
+        {
+          "task_id": "FIX-019",
+          "title": "Create shared coordinate transformation utility",
+          "file": "NEW: utils/coordinates.js",
+          "description": "Centralize 2D↔3D coordinate conversions",
+          "effort": "2 hours"
+        }
+      ]
+    },
+    "wave_6": {
+      "name": "Backend Integration",
+      "priority": "P1 - HIGH",
+      "estimated_effort": "12-16 hours",
+      "agents_needed": 4,
+      "tasks": [
+        {
+          "task_id": "FIX-020",
+          "title": "Migrate backend floor plan to SQLite",
+          "file": "floor_plan.py + NEW: FloorPlanDatabase",
+          "description": "Replace in-memory dict with database",
+          "effort": "4 hours"
+        },
+        {
+          "task_id": "FIX-021",
+          "title": "Add floor plan API methods to client",
+          "file": "api/client.js",
+          "description": "Add saveFloorPlan, getFloorPlan, etc.",
+          "effort": "2 hours"
+        },
+        {
+          "task_id": "FIX-022",
+          "title": "Implement dual-save with backend sync",
+          "file": "useLocalStorage.js",
+          "description": "Save to localStorage + backend API",
+          "effort": "4 hours"
+        }
+      ]
+    }
+  },
+
+  "validation_tests": [
+    {
+      "test": "Resize room slowly, verify final position saved",
+      "expected": "Room dimensions match drag endpoint exactly"
+    },
+    {
+      "test": "Resize room quickly (<100ms), verify final position saved",
+      "expected": "Room dimensions match drag endpoint exactly"
+    },
+    {
+      "test": "Press Ctrl+Z during active resize",
+      "expected": "Shortcut ignored until resize completes"
+    },
+    {
+      "test": "Open help modal, press Escape",
+      "expected": "Modal closes, room selection preserved"
+    },
+    {
+      "test": "Edit room in 2D, verify 3D updates",
+      "expected": "3D view reflects changes immediately"
+    },
+    {
+      "test": "Undo/redo in HVAC/Electrical/Plumbing routers",
+      "expected": "Operations can be undone and redone"
+    },
+    {
+      "test": "Refresh page, verify floor plan persists",
+      "expected": "All room data restored from storage"
+    }
+  ],
+
+  "success_metrics": {
+    "resize_accuracy": "100% of resize operations capture final position",
+    "undo_coverage": "All modules support undo/redo",
+    "event_safety": "Zero keyboard shortcuts fire during drag operations",
+    "persistence": "Zero data loss on page refresh",
+    "3d_sync": "2D and 3D views stay synchronized"
+  }
+}
