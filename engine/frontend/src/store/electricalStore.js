@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { temporal } from 'zundo'
+import { generateElectricalLayout, estimateElectricalCost } from '../utils/canadianElectricalCode'
 
 // Default electrical state structure
 const defaultElectricalState = {
@@ -8,7 +9,10 @@ const defaultElectricalState = {
   selectedItem: null, // Currently selected equipment or wire
   tool: 'select',     // Current tool: 'select', 'wire', 'measure'
   isDrawingWire: false,
-  wireStart: null     // Starting point for wire drawing
+  wireStart: null,    // Starting point for wire drawing
+
+  // UX-009: CEC design state
+  electricalDesign: null,  // Stores calculated design with CEC compliance
 }
 
 // Create store with temporal (undo/redo) middleware
@@ -109,8 +113,58 @@ const useElectricalStore = create(
       getWireCount: () => get().wires.length,
       getEquipmentByType: (type) => get().equipment.filter(e => e.type === type),
 
+      // UX-009: Auto-populate electrical from floor plan using CEC
+      autoPopulateFromFloorPlan: (floorPlan) => {
+        try {
+          // Generate electrical layout using Canadian Electrical Code
+          const layout = generateElectricalLayout(floorPlan)
+          const cost = estimateElectricalCost(layout)
+
+          // Update store with generated equipment and wires
+          set({
+            equipment: layout.equipment,
+            wires: layout.wires,
+            electricalDesign: {
+              ...layout,
+              estimated_cost: cost,
+            },
+            selectedItem: null,
+          })
+
+          return {
+            success: true,
+            summary: layout.summary,
+            code_compliance: layout.code_compliance,
+            estimated_cost: cost,
+            equipmentCount: layout.equipment.length,
+            wireCount: layout.wires.length,
+          }
+        } catch (error) {
+          console.error('Auto-populate electrical failed:', error)
+          return {
+            success: false,
+            error: error.message,
+          }
+        }
+      },
+
+      // UX-009: Get design summary for display
+      getDesignSummary: () => {
+        const state = get()
+        if (!state.electricalDesign) return null
+
+        return {
+          ...state.electricalDesign.summary,
+          code_compliance: state.electricalDesign.code_compliance,
+          estimated_cost: state.electricalDesign.estimated_cost,
+        }
+      },
+
       // Reset
-      resetElectricalState: () => set({ ...defaultElectricalState }),
+      resetElectricalState: () => set({
+        ...defaultElectricalState,
+        electricalDesign: null,
+      }),
     }),
     {
       // Temporal options
