@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import useHVACStore from '../../store/hvacStore'
 import useFloorPlanStore from '../../store/floorPlanStore'
+import { CLIMATE_ZONES, DEFAULT_CLIMATE_ZONE } from '../../utils/canadianHVACCode'
 
 // HVAC Equipment types
 const EQUIPMENT_TYPES = {
@@ -307,9 +308,13 @@ function PropertiesPanel({ selectedItem, equipment, ducts, onUpdate, onDelete, c
   )
 }
 
-function Toolbar({ tool, setTool, systemType, setSystemType, onCalculate, onExport, onAutoDesign, isLoading }) {
+function Toolbar({
+  tool, setTool, systemType, setSystemType,
+  climateZone, setClimateZone,
+  onCalculate, onExport, onAutoDesign, isLoading
+}) {
   return (
-    <div className="flex items-center gap-2 p-2 bg-slate-800 rounded-lg">
+    <div className="flex items-center gap-2 p-2 bg-slate-800 rounded-lg flex-wrap">
       {/* Tool buttons - SketchUp style */}
       <div className="flex gap-1 border-r border-slate-600 pr-2">
         <button
@@ -355,15 +360,35 @@ function Toolbar({ tool, setTool, systemType, setSystemType, onCalculate, onExpo
         </select>
       </div>
 
+      {/* UX-008: Canadian Climate Zone selector */}
+      <div className="flex items-center gap-2 border-r border-slate-600 pr-2">
+        <span className="text-xs text-slate-400">Climate:</span>
+        <select
+          value={climateZone?.designTemp || -25}
+          onChange={(e) => {
+            const zone = Object.values(CLIMATE_ZONES).find(z => z.designTemp === parseInt(e.target.value))
+            if (zone) setClimateZone(zone)
+          }}
+          className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs"
+          title="Canadian Climate Zone (affects heating calculations)"
+        >
+          {Object.entries(CLIMATE_ZONES).map(([key, zone]) => (
+            <option key={key} value={zone.designTemp}>
+              {zone.designTemp}°C ({zone.name.split(',')[0]})
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Actions */}
       <div className="flex gap-1 ml-auto">
         <button
           onClick={onAutoDesign}
           disabled={isLoading}
           className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-wait text-white text-xs rounded flex items-center gap-1"
-          title="Auto-design HVAC system using AI"
+          title="Auto-design HVAC system using Canadian building code (ASHRAE 62.2, CSA F280)"
         >
-          <span>{isLoading ? '...' : '🤖'}</span> Auto-Design
+          <span>{isLoading ? '...' : '🍁'}</span> Auto-Design (CAN)
         </button>
         <button
           onClick={onCalculate}
@@ -403,6 +428,7 @@ function RoomOverlay({ rooms, scale }) {
 
 export default function HVACRouter({ floorPlan: floorPlanProp, onSave }) {
   // STATE-001: Connect to Zustand stores instead of local useState
+  // UX-008: Added Canadian code state and actions
   const {
     equipment,
     ducts,
@@ -410,6 +436,9 @@ export default function HVACRouter({ floorPlan: floorPlanProp, onSave }) {
     tool,
     isDrawingDuct,
     ductStart,
+    climateZone,
+    buildingQuality,
+    hvacDesign,
     setEquipment,
     addEquipment,
     updateEquipment,
@@ -425,6 +454,9 @@ export default function HVACRouter({ floorPlan: floorPlanProp, onSave }) {
     setDuctStart,
     resetDuctDrawing,
     moveEquipment,
+    setClimateZone,
+    setBuildingQuality,
+    autoPopulateFromFloorPlan,
   } = useHVACStore()
 
   // WORKFLOW-002/003: Get floor plan from shared store
@@ -588,82 +620,107 @@ export default function HVACRouter({ floorPlan: floorPlanProp, onSave }) {
     URL.revokeObjectURL(url)
   }
 
-  // Auto-design using MEPSystemEngine API
+  // UX-008: Auto-design using Canadian building code (local calculation)
   const handleAutoDesign = async () => {
     setIsLoading(true)
     try {
-      // Prepare rooms data from floor plan
-      const roomsData = plan.rooms.map(room => ({
-        name: room.name,
-        width: room.dimensions.width,
-        height: room.dimensions.depth,
-        x: room.position.x,
-        y: room.position.y,
-        occupancy: 2,
-        has_window: true
-      }))
-
-      const response = await fetch('/api/hvac/auto-design', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rooms: roomsData,
-          systemType: systemType
-        })
+      // Use Zustand store's auto-populate with Canadian code
+      const result = autoPopulateFromFloorPlan(plan, {
+        systemType,
+        climateZone,
+        buildingQuality,
       })
 
-      const result = await response.json()
-
-      if (result.success && result.data) {
-        // Add equipment from API response - STATE-001: Uses Zustand actions
-        if (result.data.equipment && result.data.equipment.length > 0) {
-          result.data.equipment.forEach((eq, idx) => {
-            addEquipment({
-              id: generateId(),
-              type: eq.type || 'mini_split_indoor',
-              position: { x: eq.x || 100 + idx * 150, y: eq.y || 100 + idx * 100 },
-              specs: {
-                btu: eq.capacity ? eq.capacity * 3412 : 12000,
-                cfm: eq.airflow || 100
-              },
-              label: eq.label
-            })
-          })
-        }
-
-        // Add ducts from API response - STATE-001: Uses Zustand actions
-        if (result.data.ducts && result.data.ducts.length > 0) {
-          result.data.ducts.forEach(d => {
-            addDuct({
-              id: generateId(),
-              start: { x: d.startX, y: d.startY },
-              end: { x: d.endX, y: d.endY },
-              width: d.size?.width || 200,
-              type: d.type || 'supply'
-            })
-          })
-        }
-
+      if (result.success) {
         // Update calculations from design
-        if (result.data.design) {
-          setCalculations({
-            cooling: result.data.design.cooling_capacity,
-            heating: result.data.design.heating_capacity,
-            airflow: result.data.design.airflow,
-            cost: result.data.design.cost,
-            efficiency: result.data.design.energy_efficiency,
-            totalArea: plan.rooms.reduce((sum, r) => sum + (r.dimensions.width * r.dimensions.depth / 1000000), 0)
-          })
-        }
+        setCalculations({
+          cooling: result.calculations.cooling,
+          heating: result.calculations.heating,
+          airflow: result.calculations.airflow,
+          cost: result.calculations.cost,
+          efficiency: result.calculations.efficiency,
+          totalArea: plan.rooms.reduce((sum, r) => sum + (r.dimensions.width * r.dimensions.depth / 1000000), 0)
+        })
 
-        console.log('HVAC auto-design complete:', result.data)
+        console.log('HVAC auto-design complete (Canadian code):', {
+          equipment: result.equipmentCount,
+          ducts: result.ductCount,
+          design: result.design,
+        })
       } else {
         console.error('Auto-design failed:', result.error)
-        alert('Auto-design failed: ' + (result.error?.message || 'Unknown error'))
+        alert('Auto-design failed: ' + (result.error || 'Unknown error'))
       }
+
     } catch (err) {
-      console.error('Auto-design API error:', err)
-      alert('Failed to connect to API. Make sure the backend is running.')
+      console.error('Auto-design error:', err)
+
+      // Fallback to API if local calculation fails
+      try {
+        const roomsData = plan.rooms.map(room => ({
+          name: room.name,
+          width: room.dimensions.width,
+          height: room.dimensions.depth,
+          x: room.position.x,
+          y: room.position.y,
+          occupancy: 2,
+          has_window: true
+        }))
+
+        const response = await fetch('/api/hvac/auto-design', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rooms: roomsData,
+            systemType: systemType
+          })
+        })
+
+        const result = await response.json()
+
+        if (result.success && result.data) {
+          if (result.data.equipment?.length > 0) {
+            result.data.equipment.forEach((eq, idx) => {
+              addEquipment({
+                id: generateId(),
+                type: eq.type || 'mini_split_indoor',
+                position: { x: eq.x || 100 + idx * 150, y: eq.y || 100 + idx * 100 },
+                specs: {
+                  btu: eq.capacity ? eq.capacity * 3412 : 12000,
+                  cfm: eq.airflow || 100
+                },
+                label: eq.label
+              })
+            })
+          }
+
+          if (result.data.ducts?.length > 0) {
+            result.data.ducts.forEach(d => {
+              addDuct({
+                id: generateId(),
+                start: { x: d.startX, y: d.startY },
+                end: { x: d.endX, y: d.endY },
+                width: d.size?.width || 200,
+                type: d.type || 'supply'
+              })
+            })
+          }
+
+          if (result.data.design) {
+            setCalculations({
+              cooling: result.data.design.cooling_capacity,
+              heating: result.data.design.heating_capacity,
+              airflow: result.data.design.airflow,
+              cost: result.data.design.cost,
+              efficiency: result.data.design.energy_efficiency,
+              totalArea: plan.rooms.reduce((sum, r) => sum + (r.dimensions.width * r.dimensions.depth / 1000000), 0)
+            })
+          }
+        }
+      } catch (apiErr) {
+        console.error('API fallback also failed:', apiErr)
+        alert('Auto-design failed. Please check the floor plan data.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -697,11 +754,14 @@ export default function HVACRouter({ floorPlan: floorPlanProp, onSave }) {
       </div>
 
       {/* Toolbar - SketchUp style */}
+      {/* UX-008: Added Canadian climate zone selector */}
       <Toolbar
         tool={tool}
         setTool={setTool}
         systemType={systemType}
         setSystemType={setSystemType}
+        climateZone={climateZone}
+        setClimateZone={setClimateZone}
         onCalculate={handleCalculate}
         onExport={handleExport}
         onAutoDesign={handleAutoDesign}
