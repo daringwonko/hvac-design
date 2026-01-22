@@ -49,6 +49,14 @@ export const api = {
   deleteProject: (id) => apiClient.delete(`/projects/${id}`),
   calculateProject: (id) => apiClient.post(`/projects/${id}/calculate`),
 
+  // Floor Plans
+  getFloorPlan: (id) => apiClient.get('/floor-plan', { params: id ? { id } : {} }),
+  getFloorPlanById: (id) => apiClient.get(`/floor-plan/${id}`),
+  createFloorPlan: (data) => apiClient.post('/floor-plan', data),
+  updateFloorPlan: (id, data) => apiClient.put(`/floor-plan/${id}`, data),
+  deleteFloorPlan: (id) => apiClient.delete(`/floor-plan/${id}`),
+  listFloorPlans: () => apiClient.get('/floor-plans'),
+
   // Materials
   listMaterials: (params) => apiClient.get('/materials', { params }),
   getMaterial: (id) => apiClient.get(`/materials/${id}`),

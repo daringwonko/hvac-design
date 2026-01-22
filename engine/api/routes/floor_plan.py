@@ -3,6 +3,8 @@ Floor Plan API Routes for MEP Design Studio.
 
 Provides endpoints for loading, saving, and managing floor plans
 used by HVAC, Electrical, and Plumbing routers.
+
+Uses SQLite persistence via ProjectDatabase.
 """
 
 import os
@@ -11,13 +13,16 @@ import uuid
 import logging
 from datetime import datetime
 from flask import Blueprint, jsonify, request
+from ..core_wrapper import get_project_database
 
 logger = logging.getLogger(__name__)
 
 floor_plan_bp = Blueprint('floor_plan', __name__, url_prefix='/api')
 
-# In-memory storage for floor plans (will be replaced with SQLite in TICKET-005)
-_floor_plans_store = {}
+# Get database instance (lazy initialization)
+def get_db():
+    """Get the project database instance"""
+    return get_project_database()
 
 # Path to default floor plan data
 DEFAULT_FLOOR_PLAN_PATH = os.path.join(
@@ -56,13 +61,15 @@ def get_floor_plan():
         # Check if there's a custom floor plan set
         active_plan_id = request.args.get('id')
 
-        if active_plan_id and active_plan_id in _floor_plans_store:
-            plan = _floor_plans_store[active_plan_id]
-            return jsonify({
-                "success": True,
-                "data": plan,
-                "error": None
-            }), 200
+        if active_plan_id:
+            db = get_db()
+            plan = db.get_floor_plan(active_plan_id)
+            if plan:
+                return jsonify({
+                    "success": True,
+                    "data": plan,
+                    "error": None
+                }), 200
 
         # Load default floor plan
         default_plan = load_default_floor_plan()
@@ -124,19 +131,18 @@ def create_floor_plan():
                 }
             }), 400
 
-        # Generate unique ID for the floor plan
-        plan_id = str(uuid.uuid4())
-
         # Add metadata
+        now = datetime.utcnow().isoformat()
         floor_plan = {
-            "id": plan_id,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": now,
+            "updated_at": now,
             **data
         }
 
-        # Store the floor plan
-        _floor_plans_store[plan_id] = floor_plan
+        # Save to database (returns the ID)
+        db = get_db()
+        plan_id = db.save_floor_plan(floor_plan)
+        floor_plan["id"] = plan_id
 
         logger.info(f"Created floor plan {plan_id}")
 
@@ -173,7 +179,10 @@ def get_floor_plan_by_id(plan_id):
         JSON response with the full floor plan data
     """
     try:
-        if plan_id not in _floor_plans_store:
+        db = get_db()
+        plan = db.get_floor_plan(plan_id)
+
+        if not plan:
             return jsonify({
                 "success": False,
                 "data": None,
@@ -185,7 +194,7 @@ def get_floor_plan_by_id(plan_id):
 
         return jsonify({
             "success": True,
-            "data": _floor_plans_store[plan_id],
+            "data": plan,
             "error": None
         }), 200
 
@@ -213,7 +222,10 @@ def update_floor_plan(plan_id):
         JSON response with the updated floor plan ID and timestamp
     """
     try:
-        if plan_id not in _floor_plans_store:
+        db = get_db()
+        existing_plan = db.get_floor_plan(plan_id)
+
+        if not existing_plan:
             return jsonify({
                 "success": False,
                 "data": None,
@@ -236,16 +248,17 @@ def update_floor_plan(plan_id):
             }), 400
 
         # Update the floor plan
-        existing_plan = _floor_plans_store[plan_id]
+        now = datetime.utcnow().isoformat()
         updated_plan = {
             **existing_plan,
             **data,
             "id": plan_id,  # Preserve original ID
-            "created_at": existing_plan["created_at"],  # Preserve creation time
-            "updated_at": datetime.utcnow().isoformat()
+            "created_at": existing_plan.get("created_at", now),  # Preserve creation time
+            "updated_at": now
         }
 
-        _floor_plans_store[plan_id] = updated_plan
+        # Save to database
+        db.save_floor_plan(updated_plan)
 
         logger.info(f"Updated floor plan {plan_id}")
 
@@ -282,7 +295,10 @@ def delete_floor_plan(plan_id):
         JSON response confirming deletion
     """
     try:
-        if plan_id not in _floor_plans_store:
+        db = get_db()
+        deleted = db.delete_floor_plan(plan_id)
+
+        if not deleted:
             return jsonify({
                 "success": False,
                 "data": None,
@@ -291,8 +307,6 @@ def delete_floor_plan(plan_id):
                     "message": f"Floor plan {plan_id} not found"
                 }
             }), 404
-
-        del _floor_plans_store[plan_id]
 
         logger.info(f"Deleted floor plan {plan_id}")
 
@@ -323,15 +337,8 @@ def list_floor_plans():
         JSON response with list of floor plan summaries
     """
     try:
-        plans = []
-        for plan_id, plan in _floor_plans_store.items():
-            plans.append({
-                "id": plan_id,
-                "name": plan.get("name", "Unnamed"),
-                "created_at": plan.get("created_at"),
-                "updated_at": plan.get("updated_at"),
-                "room_count": len(plan.get("rooms", []))
-            })
+        db = get_db()
+        plans = db.list_floor_plans()
 
         return jsonify({
             "success": True,
