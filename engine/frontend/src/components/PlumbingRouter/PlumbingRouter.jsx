@@ -244,12 +244,37 @@ function calculateArrowPoints(x1, y1, x2, y2) {
 function Fixture({ fixture, isSelected, onSelect, onDrag }) {
   const fixtureInfo = FIXTURE_TYPES[fixture.type]
   const [isDragging, setIsDragging] = useState(false)
+  const dragStartRef = useRef({ x: 0, y: 0 })
 
   const handleMouseDown = (e) => {
     e.stopPropagation()
     setIsDragging(true)
+    dragStartRef.current = { x: e.clientX, y: e.clientY }
     onSelect(fixture.id)
   }
+
+  // Handle drag with window event listeners (matches HVAC pattern)
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleMouseMove = (e) => {
+      const dx = e.clientX - dragStartRef.current.x
+      const dy = e.clientY - dragStartRef.current.y
+      onDrag(fixture.id, fixture.x + dx, fixture.y + dy)
+      dragStartRef.current = { x: e.clientX, y: e.clientY }
+    }
+
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, fixture, onDrag])
 
   return (
     <g
@@ -592,6 +617,7 @@ export default function PlumbingRouter() {
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [drawingPipe, setDrawingPipe] = useState(null)
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
   const [floorPlanRooms, setFloorPlanRooms] = useState([])
 
   // Load floor plan data
@@ -638,6 +664,20 @@ export default function PlumbingRouter() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedItem])
+
+  const handleCanvasMouseMove = useCallback((e) => {
+    if (!svgRef.current) return
+
+    const rect = svgRef.current.getBoundingClientRect()
+    const x = (e.clientX - rect.left - pan.x) / zoom
+    const y = (e.clientY - rect.top - pan.y) / zoom
+
+    // Snap to grid
+    const snappedX = Math.round(x / 10) * 10
+    const snappedY = Math.round(y / 10) * 10
+
+    setCursorPosition({ x: snappedX, y: snappedY })
+  }, [zoom, pan])
 
   const handleCanvasClick = useCallback((e) => {
     if (!svgRef.current) return
@@ -842,6 +882,7 @@ export default function PlumbingRouter() {
             ref={svgRef}
             className="w-full h-full"
             onClick={handleCanvasClick}
+            onMouseMove={handleCanvasMouseMove}
             style={{ cursor: activeTool === 'pipe' ? 'crosshair' : 'default' }}
           >
             <defs>
@@ -894,12 +935,12 @@ export default function PlumbingRouter() {
                 <line
                   x1={drawingPipe.startX}
                   y1={drawingPipe.startY}
-                  x2={drawingPipe.startX}
-                  y2={drawingPipe.startY}
+                  x2={cursorPosition.x}
+                  y2={cursorPosition.y}
                   stroke={PIPE_TYPES[activePipeType].color}
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  opacity={0.5}
+                  strokeWidth={3}
+                  strokeDasharray="5,5"
+                  opacity={0.7}
                 />
               )}
 
