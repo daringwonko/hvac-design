@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Text } from '@react-three/drei'
 import * as THREE from 'three'
+import useSelectionStore from '../../store/selectionStore'
 
 // Scale factor: 1 unit = 1 meter
 const MM_TO_M = 0.001
@@ -28,7 +29,8 @@ function Wall({
   rotation = [0, 0, 0],
   color,
   opacity = 0.6,
-  isSelected
+  isSelected,
+  baseColor
 }) {
   return (
     <mesh position={position} rotation={rotation} castShadow receiveShadow>
@@ -38,6 +40,8 @@ function Wall({
         transparent
         opacity={isSelected ? 0.8 : opacity}
         side={THREE.DoubleSide}
+        emissive={isSelected ? baseColor : '#000000'}
+        emissiveIntensity={isSelected ? 0.2 : 0}
       />
     </mesh>
   )
@@ -48,10 +52,18 @@ export default function Room3D({
   offsetX,
   offsetZ,
   wallHeight = 2.7,
-  isSelected = false
 }) {
+  const { select, selectedIds } = useSelectionStore()
+  const isSelected = selectedIds.includes(room.id)
+
   const color = ROOM_COLORS[room.room_type] || ROOM_COLORS.other
   const selectedColor = '#ffffff'
+
+  // Handle room click for selection
+  const handleClick = (e) => {
+    e.stopPropagation()
+    select(room.id)
+  }
 
   // Convert dimensions from mm to meters
   const width = room.dimensions.width * MM_TO_M
@@ -93,7 +105,7 @@ export default function Room3D({
   ], [x, z, width, depth, height])
 
   return (
-    <group>
+    <group onClick={handleClick}>
       {/* Floor */}
       <mesh
         position={[x, 0.03, z]}
@@ -102,9 +114,11 @@ export default function Room3D({
       >
         <planeGeometry args={[width - 0.02, depth - 0.02]} />
         <meshStandardMaterial
-          color={color}
+          color={isSelected ? selectedColor : color}
           transparent
           opacity={isSelected ? 0.5 : 0.3}
+          emissive={isSelected ? color : '#000000'}
+          emissiveIntensity={isSelected ? 0.3 : 0}
         />
       </mesh>
 
@@ -124,6 +138,7 @@ export default function Room3D({
           color={isSelected ? selectedColor : color}
           opacity={0.4}
           isSelected={isSelected}
+          baseColor={color}
         />
       ))}
 
