@@ -1,0 +1,137 @@
+{
+  "sprint": "005",
+  "codename": "TOTAL_SYSTEM_DEEP_DIVE",
+  "objective": "Comprehensive codebase analysis + Canadian Building Code Session Experience",
+  "phase": "RESEARCH",
+  "status": "INITIALIZING",
+
+  "user_story": {
+    "summary": "Session Experience with Building Code Intelligence",
+    "description": "Floor plan should auto-populate basics in every subsequent module with regional building code requirements",
+    "regional_code": "Canadian Electrical Code (CEC)",
+    "requirements": [
+      "At least one receptacle on every wall, or every 12 feet",
+      "Receptacles 16 inches off ground (standard)",
+      "Standard circuits: 15A",
+      "Kitchen circuits: 20A",
+      "Stove circuits: 220-240VAC",
+      "GFCI required: within 3 feet of water or outdoors",
+      "Arc-fault breakers required on bedroom circuits (new code)"
+    ]
+  },
+
+  "critical_bugs_reported": {
+    "mouse_interface": "Only some surfaces allow resizing",
+    "module_architecture": "Workflow disconnected between modules"
+  },
+
+  "scout_deployment_plan": {
+    "wave_1_frontend_components": {
+      "count": 20,
+      "targets": [
+        "FloorPlanEditor.jsx - Mouse events, resize, drag handlers",
+        "Room3D.jsx - 3D interaction handlers",
+        "FloorPlan3DView.jsx - 3D scene setup",
+        "HVACRouter.jsx - HVAC component interactions",
+        "ElectricalRouter.jsx - Electrical wiring UI",
+        "PlumbingRouter.jsx - Plumbing fixture handling",
+        "Calculator.jsx - Calculation interface",
+        "Dashboard.jsx - Main dashboard UX",
+        "Projects.jsx - Project list interactions",
+        "ProjectDetail.jsx - Project detail view",
+        "Materials.jsx - Materials management",
+        "Exports.jsx - Export functionality",
+        "Monitoring.jsx - System monitoring UI",
+        "Visualization.jsx - 3D visualization",
+        "ImportDialog.jsx - File import UX",
+        "Layout.jsx - App layout/navigation",
+        "ConfirmDialog.jsx - Modal interactions",
+        "KeyboardShortcutsModal.jsx - Keyboard bindings",
+        "App.jsx - Root component setup",
+        "main.jsx - Application entry point"
+      ]
+    },
+    "wave_2_state_and_hooks": {
+      "count": 8,
+      "targets": [
+        "floorPlanStore.js - Floor plan state management",
+        "selectionStore.js - Selection state",
+        "electricalStore.js - Electrical state",
+        "hvacStore.js - HVAC state",
+        "plumbingStore.js - Plumbing state",
+        "useKeyboardShortcuts.js - Keyboard hook",
+        "useLocalStorage.js - Persistence hook",
+        "client.js - API client methods"
+      ]
+    },
+    "wave_3_backend_routes": {
+      "count": 12,
+      "targets": [
+        "floor_plan.py - Floor plan CRUD",
+        "electrical.py - Electrical API",
+        "hvac.py - HVAC API",
+        "plumbing.py - Plumbing API",
+        "calculations.py - Load calculations",
+        "projects.py - Project management",
+        "materials.py - Materials API",
+        "exports.py - Export endpoints",
+        "imports.py - Import endpoints",
+        "load.py - Load management",
+        "health.py - Health checks",
+        "schemas.py - Data schemas"
+      ]
+    },
+    "wave_4_core_systems": {
+      "count": 10,
+      "targets": [
+        "app.py - FastAPI setup",
+        "project_database.py - SQLite persistence",
+        "floor_plan.py (design) - Floor plan logic",
+        "mep_systems.py - MEP system logic",
+        "load_calculation.py - Load calculation engine",
+        "load_thresholds.py - Threshold definitions",
+        "load_types.py - Load type definitions",
+        "config_manager.py - Configuration",
+        "structural_engine.py - Structural calculations",
+        "multi_story_designer.py - Multi-story logic"
+      ]
+    },
+    "wave_5_utilities_and_integration": {
+      "count": 6,
+      "targets": [
+        "throttle.js - Throttle/debounce utilities",
+        "coordinates.js - Coordinate transforms",
+        "websocket/handlers.py - Real-time handlers",
+        "websocket/events.py - WebSocket events",
+        "energy_optimization.py - Energy analysis",
+        "dxf_importer.py - CAD import"
+      ]
+    }
+  },
+
+  "total_scouts": 56,
+
+  "synthesis_plan": {
+    "synthesizer_count": 6,
+    "areas": [
+      "SYNTH-1: Mouse/Interaction Bugs",
+      "SYNTH-2: State Management Gaps",
+      "SYNTH-3: API/Backend Integration",
+      "SYNTH-4: Module Workflow Connectivity",
+      "SYNTH-5: Building Code Compliance Architecture",
+      "SYNTH-6: Session Experience Design"
+    ]
+  },
+
+  "expected_ticket_categories": [
+    "MOUSE - Mouse interaction bugs",
+    "RESIZE - Resize/drag issues",
+    "STATE - State management problems",
+    "SYNC - 2D/3D synchronization",
+    "API - Backend API issues",
+    "WORKFLOW - Module workflow gaps",
+    "CODE - Building code compliance",
+    "UX - User experience issues",
+    "ARCH - Architecture improvements"
+  ]
+}

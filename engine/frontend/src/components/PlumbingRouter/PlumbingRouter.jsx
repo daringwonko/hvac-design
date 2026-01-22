@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import usePlumbingStore from '../../store/plumbingStore'
+import useFloorPlanStore from '../../store/floorPlanStore'
 
 // Plumbing fixture types based on MEPSystemEngine.design_plumbing()
 const FIXTURE_TYPES = {
@@ -608,31 +610,54 @@ function Toolbar({ activeTool, onToolChange, activePipeType, onPipeTypeChange, o
 // Main PlumbingRouter component
 export default function PlumbingRouter() {
   const svgRef = useRef(null)
-  const [fixtures, setFixtures] = useState([])
-  const [pipes, setPipes] = useState([])
-  const [selectedFixture, setSelectedFixture] = useState(null)
-  const [selectedItem, setSelectedItem] = useState(null)
-  const [activeTool, setActiveTool] = useState('select')
-  const [activePipeType, setActivePipeType] = useState('cold_water')
+
+  // STATE-001: Connect to Zustand stores instead of local useState
+  const {
+    fixtures,
+    pipes,
+    selectedItem,
+    tool: activeTool,
+    isDrawingPipe,
+    pipeStart,
+    pipeType: activePipeType,
+    setFixtures,
+    addFixture,
+    updateFixture,
+    deleteFixture,
+    setPipes,
+    addPipe,
+    updatePipe,
+    deletePipe,
+    setSelectedItem,
+    clearSelection,
+    setTool: setActiveTool,
+    setIsDrawingPipe,
+    setPipeStart,
+    setPipeType: setActivePipeType,
+    resetPipeDrawing,
+    moveFixture,
+  } = usePlumbingStore()
+
+  // WORKFLOW-002/005: Get floor plan from shared store instead of fetch
+  const { floorPlan } = useFloorPlanStore()
+
+  // Local UI state (not persisted)
+  const [selectedFixtureType, setSelectedFixtureType] = useState(null)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [drawingPipe, setDrawingPipe] = useState(null)
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
-  const [floorPlanRooms, setFloorPlanRooms] = useState([])
 
-  // Load floor plan data
-  useEffect(() => {
-    fetch('/api/floor-plan')
-      .then(res => res.json())
-      .then(data => {
-        if (data.rooms) {
-          setFloorPlanRooms(data.rooms)
-        }
-      })
-      .catch(err => console.log('No floor plan loaded:', err))
-  }, [])
+  // Convert floor plan rooms to format expected by PlumbingRouter
+  const floorPlanRooms = floorPlan.rooms.map(room => ({
+    name: room.name,
+    x: room.position?.x || 0,
+    y: room.position?.y || 0,
+    width: room.dimensions?.width || 0,
+    height: room.dimensions?.depth || 0,
+  }))
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts - STATE-001: Uses Zustand actions
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT') return
@@ -648,9 +673,10 @@ export default function PlumbingRouter() {
           setActiveTool('measure')
           break
         case 'escape':
-          setSelectedItem(null)
-          setSelectedFixture(null)
+          clearSelection()
+          setSelectedFixtureType(null)
           setDrawingPipe(null)
+          resetPipeDrawing()
           break
         case 'delete':
         case 'backspace':
@@ -663,14 +689,15 @@ export default function PlumbingRouter() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedItem])
+  }, [selectedItem, setActiveTool, clearSelection, resetPipeDrawing])
 
-  // Reset pipe drawing state when tool changes away from 'pipe'
+  // Reset pipe drawing state when tool changes away from 'pipe' - STATE-001
   useEffect(() => {
     if (activeTool !== 'pipe') {
       setDrawingPipe(null)
+      resetPipeDrawing()
     }
-  }, [activeTool])
+  }, [activeTool, resetPipeDrawing])
 
   const handleCanvasMouseMove = useCallback((e) => {
     if (!svgRef.current) return
@@ -686,6 +713,7 @@ export default function PlumbingRouter() {
     setCursorPosition({ x: snappedX, y: snappedY })
   }, [zoom, pan])
 
+  // Handle canvas click - STATE-001: Uses Zustand actions
   const handleCanvasClick = useCallback((e) => {
     if (!svgRef.current) return
 
@@ -697,16 +725,16 @@ export default function PlumbingRouter() {
     const snappedX = Math.round(x / 10) * 10
     const snappedY = Math.round(y / 10) * 10
 
-    if (selectedFixture) {
-      // Place fixture
+    if (selectedFixtureType) {
+      // Place fixture - STATE-001: Uses Zustand action
       const newFixture = {
         id: `fixture-${Date.now()}`,
-        type: selectedFixture,
+        type: selectedFixtureType,
         x: snappedX,
         y: snappedY,
         rotation: 0,
       }
-      setFixtures(prev => [...prev, newFixture])
+      addFixture(newFixture)
       setSelectedItem(newFixture.id)
     } else if (activeTool === 'pipe') {
       if (!drawingPipe) {
@@ -716,7 +744,7 @@ export default function PlumbingRouter() {
           startY: snappedY,
         })
       } else {
-        // Finish pipe
+        // Finish pipe - STATE-001: Uses Zustand action
         const newPipe = {
           id: `pipe-${Date.now()}`,
           ...drawingPipe,
@@ -725,31 +753,30 @@ export default function PlumbingRouter() {
           pipeType: activePipeType,
           size: PIPE_TYPES[activePipeType].defaultSize,
         }
-        setPipes(prev => [...prev, newPipe])
+        addPipe(newPipe)
         setDrawingPipe(null)
         setSelectedItem(newPipe.id)
       }
     } else {
-      setSelectedItem(null)
+      clearSelection()
     }
-  }, [selectedFixture, activeTool, activePipeType, drawingPipe, zoom, pan])
+  }, [selectedFixtureType, activeTool, activePipeType, drawingPipe, zoom, pan, addFixture, addPipe, setSelectedItem, clearSelection])
 
+  // Update fixture - STATE-001: Uses Zustand action
   const handleUpdateFixture = (id, updates) => {
-    setFixtures(prev => prev.map(f =>
-      f.id === id ? { ...f, ...updates } : f
-    ))
+    updateFixture(id, updates)
   }
 
+  // Update pipe - STATE-001: Uses Zustand action
   const handleUpdatePipe = (id, updates) => {
-    setPipes(prev => prev.map(p =>
-      p.id === id ? { ...p, ...updates } : p
-    ))
+    updatePipe(id, updates)
   }
 
+  // Delete item - STATE-001: Uses Zustand actions
   const handleDelete = (id) => {
-    setFixtures(prev => prev.filter(f => f.id !== id))
-    setPipes(prev => prev.filter(p => p.id !== id))
-    setSelectedItem(null)
+    deleteFixture(id)
+    deletePipe(id)
+    clearSelection()
   }
 
   const handleAutoRoute = async () => {
@@ -876,9 +903,9 @@ export default function PlumbingRouter() {
 
       <div className="flex-1 flex overflow-hidden">
         <FixturePalette
-          selectedFixture={selectedFixture}
+          selectedFixture={selectedFixtureType}
           onSelectFixture={(type) => {
-            setSelectedFixture(type)
+            setSelectedFixtureType(type)
             setActiveTool('select')
           }}
         />
@@ -987,8 +1014,8 @@ export default function PlumbingRouter() {
 
           {/* Tool hint */}
           <div className="absolute top-4 left-4 bg-slate-800/80 px-3 py-1.5 rounded text-xs text-slate-400">
-            {activeTool === 'select' && selectedFixture && `Click to place ${FIXTURE_TYPES[selectedFixture].label}`}
-            {activeTool === 'select' && !selectedFixture && 'Click fixture to select, or choose from palette'}
+            {activeTool === 'select' && selectedFixtureType && `Click to place ${FIXTURE_TYPES[selectedFixtureType].label}`}
+            {activeTool === 'select' && !selectedFixtureType && 'Click fixture to select, or choose from palette'}
             {activeTool === 'pipe' && !drawingPipe && 'Click to start drawing pipe'}
             {activeTool === 'pipe' && drawingPipe && 'Click to finish pipe segment'}
             {activeTool === 'measure' && 'Click two points to measure distance'}

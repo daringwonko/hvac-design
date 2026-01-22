@@ -144,20 +144,16 @@ def import_dxf():
 @imports_bp.route('/formats', methods=['GET'])
 def list_formats():
     """
-    List supported import formats.
+    List supported import formats with Canadian code compliance info.
+    UX-007: Enhanced format documentation.
 
     Response:
         {
             "success": true,
             "data": {
-                "formats": [
-                    {
-                        "extension": "dxf",
-                        "name": "AutoCAD DXF",
-                        "description": "Drawing Exchange Format",
-                        "max_size_mb": 10
-                    }
-                ]
+                "formats": [...],
+                "precision": "mm",
+                "canadian_code_support": true
             }
         }
     """
@@ -170,8 +166,31 @@ def list_formats():
                     "name": "AutoCAD DXF",
                     "description": "Drawing Exchange Format - exports from AutoCAD, SketchUp, Revit, etc.",
                     "max_size_mb": MAX_FILE_SIZE // (1024 * 1024),
-                    "notes": "Export your floor plan as DXF from your CAD software. Closed polylines will be detected as rooms."
+                    "precision": "mm",
+                    "features": [
+                        "Room extraction from closed polylines",
+                        "Wall segment detection with thickness",
+                        "Door and window detection from blocks",
+                        "Layer-aware parsing (WALLS, DOORS, WINDOWS)",
+                        "Automatic unit conversion (inches, feet, meters to mm)",
+                        "Canadian building code validation (NBC, NPC)"
+                    ],
+                    "supported_layers": {
+                        "walls": ["WALL", "WALLS", "A-WALL", "STRUCTURE"],
+                        "doors": ["DOOR", "DOORS", "A-DOOR", "OPENINGS"],
+                        "windows": ["WINDOW", "WINDOWS", "A-GLAZ", "GLAZING"],
+                        "rooms": ["ROOM", "ROOMS", "SPACE", "AREA"]
+                    },
+                    "notes": "Export your floor plan as DXF from your CAD software. Use named layers for best results. All dimensions converted to mm precision."
                 }
+            ],
+            "precision": "mm",
+            "canadian_code_support": True,
+            "validation_features": [
+                "Door width compliance (min 813mm/32\" for egress)",
+                "Bedroom egress window validation (min 0.35m² opening)",
+                "Minimum bedroom area check (7.0m² per NBC)",
+                "Room occupancy estimation (NBC load factors)"
             ]
         },
         "error": None

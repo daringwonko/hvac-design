@@ -2,6 +2,7 @@
 Main Flask/FastAPI application for Ceiling Panel Calculator API.
 
 This module provides the REST API for the ceiling panel calculator platform.
+API-004: Added WebSocket support for offline-first architecture.
 """
 
 import os
@@ -16,6 +17,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Global socketio instance for access from other modules
+socketio = None
 
 
 def create_app(config: dict = None) -> Flask:
@@ -242,8 +246,26 @@ def create_app(config: dict = None) -> Flask:
             "error": None
         })
 
-    logger.info("Ceiling Panel Calculator API initialized")
+    # API-004: Initialize WebSocket support (offline-first priority)
+    global socketio
+    try:
+        from .websocket.socketio_integration import init_socketio
+        socketio = init_socketio(app)
+        if socketio:
+            logger.info("WebSocket support enabled (offline-first ready)")
+        else:
+            logger.info("WebSocket support disabled (flask-socketio not installed)")
+    except ImportError as e:
+        logger.warning(f"WebSocket module not available: {e}")
+        socketio = None
+
+    logger.info("MEP Design API initialized")
     return app
+
+
+def get_socketio():
+    """Get the global socketio instance."""
+    return socketio
 
 
 # Create default app instance
@@ -256,12 +278,17 @@ if __name__ == '__main__':
 
     print(f"""
     ╔════════════════════════════════════════════════════════════╗
-    ║         Ceiling Panel Calculator API v2.0.0                ║
+    ║           MEP Design API v2.0.0 (Offline-First)            ║
     ╠════════════════════════════════════════════════════════════╣
-    ║  Server: http://localhost:{port}                             ║
-    ║  API Docs: http://localhost:{port}/api/v1/docs               ║
-    ║  Health: http://localhost:{port}/api/v1/health               ║
+    ║  HTTP Server: http://localhost:{port}                         ║
+    ║  WebSocket:   ws://localhost:{port}/socket.io                 ║
+    ║  API Docs:    http://localhost:{port}/api/v1/docs             ║
+    ║  Health:      http://localhost:{port}/api/v1/health           ║
     ╚════════════════════════════════════════════════════════════╝
     """)
 
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    # Use SocketIO's run method if available for WebSocket support
+    if socketio:
+        socketio.run(app, host='0.0.0.0', port=port, debug=debug)
+    else:
+        app.run(host='0.0.0.0', port=port, debug=debug)

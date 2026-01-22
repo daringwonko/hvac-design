@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import useElectricalStore from '../../store/electricalStore'
+import useFloorPlanStore from '../../store/floorPlanStore'
 
 // Electrical Equipment types
 const EQUIPMENT_TYPES = {
@@ -422,31 +424,56 @@ function Toolbar({ tool, setTool, phase, setPhase, onCalculate, onExport, onAuto
   )
 }
 
-export default function ElectricalRouter({ floorPlan }) {
-  const [equipment, setEquipment] = useState([])
-  const [wires, setWires] = useState([])
-  const [selectedItem, setSelectedItem] = useState(null)
-  const [tool, setTool] = useState('select')
+export default function ElectricalRouter({ floorPlan: floorPlanProp }) {
+  // STATE-001: Connect to Zustand stores instead of local useState
+  const {
+    equipment,
+    wires,
+    selectedItem,
+    tool,
+    isDrawingWire,
+    wireStart,
+    setEquipment,
+    addEquipment,
+    updateEquipment,
+    deleteEquipment,
+    setWires,
+    addWire,
+    updateWire,
+    deleteWire,
+    setSelectedItem,
+    clearSelection,
+    setTool,
+    setIsDrawingWire,
+    setWireStart,
+    resetWireDrawing,
+    moveEquipment,
+  } = useElectricalStore()
+
+  // WORKFLOW-002/004: Get floor plan from shared store
+  const { floorPlan: storeFloorPlan } = useFloorPlanStore()
+
+  // Local UI state (not persisted)
   const [phase, setPhase] = useState('single_phase')
   const [scale, setScale] = useState(0.05)
   const [calculations, setCalculations] = useState(null)
-  const [isDrawingWire, setIsDrawingWire] = useState(false)
-  const [wireStart, setWireStart] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
 
   const svgRef = useRef(null)
 
-  const plan = floorPlan || {
+  // Use floor plan from prop, store, or default (priority: prop > store > default)
+  const plan = floorPlanProp || (storeFloorPlan.rooms.length > 0 ? storeFloorPlan : {
     name: 'Sample Floor Plan',
     overall_dimensions: { width: 17850, depth: 7496 },
     rooms: []
-  }
+  })
 
   const canvasWidth = plan.overall_dimensions.width * scale + 100
   const canvasHeight = plan.overall_dimensions.depth * scale + 100
 
   const generateId = () => `elec_${Date.now().toString(36)}`
 
+  // Handle drop from palette - STATE-001: Uses Zustand actions
   const handleDrop = (e) => {
     e.preventDefault()
     const type = e.dataTransfer.getData('equipment_type')
@@ -468,16 +495,17 @@ export default function ElectricalRouter({ floorPlan }) {
       circuit: 1
     }
 
-    setEquipment(prev => [...prev, newEquipment])
+    addEquipment(newEquipment)
     setSelectedItem({ type: 'equipment', id: newEquipment.id })
   }
 
   const handleDragOver = (e) => e.preventDefault()
   const handleDragStart = (e, type) => e.dataTransfer.setData('equipment_type', type)
 
+  // Handle wire drawing - STATE-001: Uses Zustand actions
   const handleCanvasClick = (e) => {
     if (tool !== 'wire') {
-      setSelectedItem(null)
+      clearSelection()
       return
     }
 
@@ -496,32 +524,33 @@ export default function ElectricalRouter({ floorPlan }) {
         circuitType: '15A',
         circuit: 1
       }
-      setWires(prev => [...prev, newWire])
+      addWire(newWire)
       setWireStart({ x, y })
     }
   }
 
+  // Handle equipment drag - STATE-001: Uses Zustand action
   const handleEquipmentDrag = (id, newX, newY) => {
-    setEquipment(prev => prev.map(e =>
-      e.id === id ? { ...e, position: { x: newX, y: newY } } : e
-    ))
+    moveEquipment(id, { x: newX, y: newY })
   }
 
+  // Update item - STATE-001: Uses Zustand actions
   const handleUpdateItem = (id, updates) => {
     if (selectedItem?.type === 'equipment') {
-      setEquipment(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e))
+      updateEquipment(id, updates)
     } else {
-      setWires(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w))
+      updateWire(id, updates)
     }
   }
 
+  // Delete item - STATE-001: Uses Zustand actions
   const handleDeleteItem = (id) => {
     if (selectedItem?.type === 'equipment') {
-      setEquipment(prev => prev.filter(e => e.id !== id))
+      deleteEquipment(id)
     } else {
-      setWires(prev => prev.filter(w => w.id !== id))
+      deleteWire(id)
     }
-    setSelectedItem(null)
+    clearSelection()
   }
 
   const handleCalculate = () => {
@@ -584,26 +613,30 @@ export default function ElectricalRouter({ floorPlan }) {
       const result = await response.json()
 
       if (result.success && result.data) {
+        // Add equipment from API response - STATE-001: Uses Zustand actions
         if (result.data.equipment && result.data.equipment.length > 0) {
-          const newEquipment = result.data.equipment.map((eq, idx) => ({
-            id: generateId(),
-            type: eq.type || 'outlet_duplex',
-            position: { x: eq.x || 100 + idx * 100, y: eq.y || 100 + idx * 80 },
-            specs: { circuit: eq.circuit || 'general' },
-            label: eq.label
-          }))
-          setEquipment(prev => [...prev, ...newEquipment])
+          result.data.equipment.forEach((eq, idx) => {
+            addEquipment({
+              id: generateId(),
+              type: eq.type || 'outlet_duplex',
+              position: { x: eq.x || 100 + idx * 100, y: eq.y || 100 + idx * 80 },
+              specs: { circuit: eq.circuit || 'general' },
+              label: eq.label
+            })
+          })
         }
 
+        // Add wires from API response - STATE-001: Uses Zustand actions
         if (result.data.wires && result.data.wires.length > 0) {
-          const newWires = result.data.wires.map(w => ({
-            id: generateId(),
-            start: { x: w.startX, y: w.startY },
-            end: { x: w.endX, y: w.endY },
-            circuitType: w.circuitType || '15A',
-            gauge: w.gauge
-          }))
-          setWires(prev => [...prev, ...newWires])
+          result.data.wires.forEach(w => {
+            addWire({
+              id: generateId(),
+              start: { x: w.startX, y: w.startY },
+              end: { x: w.endX, y: w.endY },
+              circuitType: w.circuitType || '15A',
+              gauge: w.gauge
+            })
+          })
         }
 
         if (result.data.design) {
@@ -629,28 +662,27 @@ export default function ElectricalRouter({ floorPlan }) {
     }
   }
 
-  // Reset wire drawing state when tool changes away from 'wire'
+  // Reset wire drawing state when tool changes away from 'wire' - STATE-001
   useEffect(() => {
     if (tool !== 'wire') {
-      setIsDrawingWire(false)
-      setWireStart(null)
+      resetWireDrawing()
     }
-  }, [tool])
+  }, [tool, resetWireDrawing])
 
+  // Keyboard shortcuts - STATE-001: Uses Zustand actions
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'v') setTool('select')
       if (e.key === 'w') setTool('wire')
       if (e.key === 'Escape') {
-        setIsDrawingWire(false)
-        setWireStart(null)
+        resetWireDrawing()
         setTool('select')
       }
       if (e.key === 'Delete' && selectedItem) handleDeleteItem(selectedItem.id)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedItem])
+  }, [selectedItem, setTool, resetWireDrawing])
 
   return (
     <div className="h-full flex flex-col">

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { temporal } from 'zundo'
+import { generateHVACLayout, calculateWholeHouseHVAC, CLIMATE_ZONES, DEFAULT_CLIMATE_ZONE } from '../utils/canadianHVACCode'
 
 // Create store with temporal (undo/redo) middleware
 const useHVACStore = create(
@@ -12,6 +13,11 @@ const useHVACStore = create(
       tool: 'select',
       isDrawingDuct: false,
       ductStart: null,
+
+      // UX-008: Canadian code design state
+      climateZone: DEFAULT_CLIMATE_ZONE,
+      buildingQuality: 'good',
+      hvacDesign: null,  // Stores the calculated design
 
       // Equipment Actions
       setEquipment: (equipment) => set({ equipment }),
@@ -96,6 +102,68 @@ const useHVACStore = create(
       getDuctCount: () => get().ducts.length,
       getEquipmentByType: (type) => get().equipment.filter(e => e.type === type),
 
+      // UX-008: Canadian Code Settings
+      setClimateZone: (zone) => set({ climateZone: zone }),
+
+      setBuildingQuality: (quality) => set({ buildingQuality: quality }),
+
+      // UX-008: Auto-populate HVAC from floor plan using Canadian code
+      autoPopulateFromFloorPlan: (floorPlan, options = {}) => {
+        const state = get()
+        const climateZone = options.climateZone || state.climateZone
+        const buildingQuality = options.buildingQuality || state.buildingQuality
+        const systemType = options.systemType || 'vrf'
+
+        try {
+          // Generate HVAC layout using Canadian code
+          const layout = generateHVACLayout(floorPlan, {
+            climateZone,
+            buildingQuality,
+            systemType,
+          })
+
+          // Update store with generated equipment and ducts
+          set({
+            equipment: layout.equipment,
+            ducts: layout.ducts,
+            hvacDesign: layout.design,
+            selectedItem: null,
+          })
+
+          return {
+            success: true,
+            design: layout.design,
+            calculations: layout.calculations,
+            equipmentCount: layout.equipment.length,
+            ductCount: layout.ducts.length,
+          }
+        } catch (error) {
+          console.error('Auto-populate HVAC failed:', error)
+          return {
+            success: false,
+            error: error.message,
+          }
+        }
+      },
+
+      // UX-008: Calculate design without populating (preview)
+      calculateDesign: (floorPlan, options = {}) => {
+        const state = get()
+        const climateZone = options.climateZone || state.climateZone
+        const buildingQuality = options.buildingQuality || state.buildingQuality
+
+        try {
+          const design = calculateWholeHouseHVAC(floorPlan.rooms, {
+            climateZone,
+            buildingQuality,
+          })
+          set({ hvacDesign: design })
+          return { success: true, design }
+        } catch (error) {
+          return { success: false, error: error.message }
+        }
+      },
+
       // Reset
       resetHVAC: () => set({
         equipment: [],
@@ -103,7 +171,8 @@ const useHVACStore = create(
         selectedItem: null,
         tool: 'select',
         isDrawingDuct: false,
-        ductStart: null
+        ductStart: null,
+        hvacDesign: null,
       }),
     }),
     {
