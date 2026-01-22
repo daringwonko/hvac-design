@@ -629,6 +629,14 @@ export default function ElectricalRouter({ floorPlan }) {
     }
   }
 
+  // Reset wire drawing state when tool changes away from 'wire'
+  useEffect(() => {
+    if (tool !== 'wire') {
+      setIsDrawingWire(false)
+      setWireStart(null)
+    }
+  }, [tool])
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'v') setTool('select')

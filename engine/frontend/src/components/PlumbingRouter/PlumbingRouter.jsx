@@ -665,6 +665,13 @@ export default function PlumbingRouter() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedItem])
 
+  // Reset pipe drawing state when tool changes away from 'pipe'
+  useEffect(() => {
+    if (activeTool !== 'pipe') {
+      setDrawingPipe(null)
+    }
+  }, [activeTool])
+
   const handleCanvasMouseMove = useCallback((e) => {
     if (!svgRef.current) return
 

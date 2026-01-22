@@ -414,6 +414,14 @@ export default function HVACRouter({ floorPlan, onSave }) {
 
   const svgRef = useRef(null)
 
+  // Reset duct drawing state when tool changes away from 'duct'
+  useEffect(() => {
+    if (tool !== 'duct') {
+      setIsDrawingDuct(false)
+      setDuctStart(null)
+    }
+  }, [tool])
+
   // Default floor plan if none provided
   const plan = floorPlan || {
     name: 'Sample Floor Plan',
