@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { modalOpenRef } from '../../hooks/useKeyboardShortcuts'
 
 const ALLOWED_TYPES = ['.dxf']
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -129,6 +130,26 @@ export default function ImportDialog({ isOpen, onClose, onImport }) {
     setIsDragging(false)
     onClose()
   }
+
+  // Track modal open state to prevent Escape from clearing selection
+  // When modal is open, Escape should only close the modal
+  useEffect(() => {
+    modalOpenRef.current = isOpen
+    return () => {
+      modalOpenRef.current = false
+    }
+  }, [isOpen])
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        handleClose()
+      }
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [isOpen])
 
   if (!isOpen) return null
 

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Grid, PerspectiveCamera, Text, Environment } from '@react-three/drei'
 import Room3D from './Room3D'
+import useFloorPlanStore from '../../store/floorPlanStore'
 
 // Scale factor: 1 unit = 1 meter
 const MM_TO_M = 0.001
@@ -127,11 +128,13 @@ function LoadingFallback() {
 }
 
 export default function FloorPlan3DView({
-  floorPlan,
   selectedRoomId,
   wallHeight = 2.7,
   className = ''
 }) {
+  // Direct store subscription
+  const floorPlan = useFloorPlanStore((state) => state.floorPlan)
+
   if (!floorPlan || !floorPlan.rooms) {
     return (
       <div className={`flex items-center justify-center bg-slate-900 ${className}`}>

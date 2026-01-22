@@ -27,14 +27,19 @@ export function useLocalStorage(key, initialValue, debounceMs = 500) {
 
   // Debounce timer ref
   const saveTimerRef = useRef(null)
+  // Idle reset timer ref for proper cleanup
+  const idleResetTimerRef = useRef(null)
 
   // Save to localStorage with debounce
   const saveToStorage = useCallback((value) => {
     if (typeof window === 'undefined') return
 
-    // Clear existing timer
+    // Clear existing timers
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
+    }
+    if (idleResetTimerRef.current) {
+      clearTimeout(idleResetTimerRef.current)
     }
 
     setSaveStatus('saving')
@@ -46,8 +51,8 @@ export function useLocalStorage(key, initialValue, debounceMs = 500) {
         setSaveStatus('saved')
         setLastSaved(new Date())
 
-        // Reset to idle after 2 seconds
-        setTimeout(() => setSaveStatus('idle'), 2000)
+        // Reset to idle after 2 seconds (tracked in ref for cleanup)
+        idleResetTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
       } catch (error) {
         console.error(`Error saving to localStorage key "${key}":`, error)
         setSaveStatus('error')
@@ -99,11 +104,14 @@ export function useLocalStorage(key, initialValue, debounceMs = 500) {
     }
   }, [key, initialValue])
 
-  // Cleanup timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
+      }
+      if (idleResetTimerRef.current) {
+        clearTimeout(idleResetTimerRef.current)
       }
     }
   }, [])
@@ -125,6 +133,13 @@ export function useLocalStorage(key, initialValue, debounceMs = 500) {
 export function useFloorPlanPersistence(store, key = 'hvac_floor_plan') {
   const { value, setValue, saveStatus, lastSaved, clearStorage } = useLocalStorage(key, null, 1000)
 
+  // Use ref to hold the latest setValue to avoid subscription gaps
+  // This prevents the subscription effect from re-running when setValue changes
+  const setValueRef = useRef(setValue)
+  useEffect(() => {
+    setValueRef.current = setValue
+  })
+
   // Load from storage on mount
   useEffect(() => {
     if (value && store) {
@@ -133,15 +148,16 @@ export function useFloorPlanPersistence(store, key = 'hvac_floor_plan') {
   }, []) // Only on mount
 
   // Subscribe to store changes and persist
+  // Uses setValueRef.current to maintain stable subscription without gaps
   useEffect(() => {
     if (!store) return
 
     const unsubscribe = store.subscribe((state) => {
-      setValue(state.floorPlan)
+      setValueRef.current(state.floorPlan)
     })
 
     return unsubscribe
-  }, [store, setValue])
+  }, [store]) // Removed setValue - using ref instead for stability
 
   return { saveStatus, lastSaved, clearStorage }
 }

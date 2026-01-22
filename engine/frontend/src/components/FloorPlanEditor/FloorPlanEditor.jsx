@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import useFloorPlanStore from '../../store/floorPlanStore'
 import useSelectionStore from '../../store/selectionStore'
 import { useFloorPlanPersistence } from '../../hooks/useLocalStorage'
-import { useKeyboardShortcuts, FLOOR_PLAN_SHORTCUTS } from '../../hooks/useKeyboardShortcuts'
+import { useKeyboardShortcuts, FLOOR_PLAN_SHORTCUTS, operationInProgressRef } from '../../hooks/useKeyboardShortcuts'
 import KeyboardShortcutsModal from '../ui/KeyboardShortcutsModal'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import FloorPlan3DView from './FloorPlan3DView'
@@ -76,11 +76,21 @@ const validateDimension = (value, min, max) => {
 // Throttle helper for smooth drag/resize performance
 const throttle = (func, limit) => {
   let inThrottle = false
+  let pendingArgs = null
+
   return function(...args) {
     if (!inThrottle) {
       func.apply(this, args)
       inThrottle = true
-      setTimeout(() => inThrottle = false, limit)
+      setTimeout(() => {
+        inThrottle = false
+        if (pendingArgs) {
+          func.apply(this, pendingArgs)
+          pendingArgs = null
+        }
+      }, limit)
+    } else {
+      pendingArgs = args
     }
   }
 }
@@ -130,7 +140,14 @@ function Room({ room, scale, isSelected, onSelect, onToggleSelect, onDrag, onRes
   const [isDragging, setIsDragging] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const [resizeHandle, setResizeHandle] = useState(null)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  // Use ref for dragStart to prevent throttle recreation on every mouse move
+  const dragStartRef = useRef({ x: 0, y: 0 })
+
+  // Connect drag/resize state to global operation ref for keyboard shortcut protection
+  useEffect(() => {
+    operationInProgressRef.current = isDragging || isResizing
+    return () => { operationInProgressRef.current = false }
+  }, [isDragging, isResizing])
 
   const x = room.position.x * scale
   const y = room.position.y * scale
@@ -145,7 +162,7 @@ function Room({ room, scale, isSelected, onSelect, onToggleSelect, onDrag, onRes
     } else {
       setIsDragging(true)
     }
-    setDragStart({ x: e.clientX, y: e.clientY })
+    dragStartRef.current = { x: e.clientX, y: e.clientY }
     // Ctrl+click or Cmd+click toggles selection instead of replacing
     if (e.ctrlKey || e.metaKey) {
       onToggleSelect(room.id)
@@ -156,21 +173,22 @@ function Room({ room, scale, isSelected, onSelect, onToggleSelect, onDrag, onRes
   }
 
   // Throttled mouse move handler for smooth drag/resize performance (16ms = 60fps)
+  // Note: dragStartRef is intentionally NOT in the dependency array to prevent throttle recreation
   const throttledMouseMove = useMemo(() =>
     throttle((e) => {
       if (isDragging) {
-        const dx = (e.clientX - dragStart.x) / scale
-        const dy = (e.clientY - dragStart.y) / scale
+        const dx = (e.clientX - dragStartRef.current.x) / scale
+        const dy = (e.clientY - dragStartRef.current.y) / scale
         onDrag(room.id, room.position.x + dx, room.position.y + dy)
-        setDragStart({ x: e.clientX, y: e.clientY })
+        dragStartRef.current = { x: e.clientX, y: e.clientY }
       } else if (isResizing && resizeHandle) {
-        const dx = (e.clientX - dragStart.x) / scale
-        const dy = (e.clientY - dragStart.y) / scale
+        const dx = (e.clientX - dragStartRef.current.x) / scale
+        const dy = (e.clientY - dragStartRef.current.y) / scale
         onResize(room.id, dx, dy, resizeHandle)
-        setDragStart({ x: e.clientX, y: e.clientY })
+        dragStartRef.current = { x: e.clientX, y: e.clientY }
       }
     }, 16),
-    [isDragging, isResizing, resizeHandle, dragStart, room, scale, onDrag, onResize]
+    [isDragging, isResizing, resizeHandle, room, scale, onDrag, onResize]
   )
 
   const handleMouseUp = useCallback(() => {

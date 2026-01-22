@@ -1,0 +1,217 @@
+{
+  "sprint_id": "SPRINT-004-UX-WIRING",
+  "sprint_name": "UX Excellence & Interaction Hierarchy",
+  "created": "2026-01-21T22:00:00Z",
+  "strategic_direction": "Audit all UX interactions to establish 'Last Action = Truth' principle across modules",
+
+  "core_principle": {
+    "name": "Last Action = Truth",
+    "description": "When a user performs an action (type input → click → drag resize), the FINAL action represents the source of truth. This hierarchy must cascade across all modules including 3D manipulation.",
+    "example": "User types 15ft width → clicks room → drags to 20ft width = Room is 20ft (drag overrides typed input)"
+  },
+
+  "discovery_phase": {
+    "objective": "Deploy Scout agents to diagnose UX wiring issues across all modules",
+    "focus_areas": [
+      "Event hierarchy and action priority",
+      "State synchronization between UI inputs and store",
+      "Drag/resize/input conflicts",
+      "2D to 3D state consistency",
+      "Saving indicator vs actual persistence"
+    ]
+  },
+
+  "scout_assignments": [
+    {
+      "scout_id": "SCOUT-001",
+      "name": "Floor Plan Resize Wiring Scout",
+      "priority": "CRITICAL",
+      "module": "FloorPlanEditor",
+      "investigation_targets": [
+        "engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+        "engine/frontend/src/store/floorPlanStore.js",
+        "engine/frontend/src/hooks/useLocalStorage.js"
+      ],
+      "questions_to_answer": [
+        "Why does resize show 'saving' but not actually change room dimensions?",
+        "What is the event flow from mousedown → mousemove → mouseup for resize?",
+        "Is resizeRoom() in store being called with correct dimensions?",
+        "Is there a race condition between ValidatedInput and resize handler?",
+        "Does localStorage debounce prevent resize from persisting?",
+        "Is there a coordinate transformation bug (canvas to room coords)?"
+      ],
+      "hypothesis": "Resize handler may be calling store but ValidatedInput is overwriting with old values, or resize delta calculation is incorrect"
+    },
+    {
+      "scout_id": "SCOUT-002",
+      "name": "Input vs Drag Hierarchy Scout",
+      "priority": "CRITICAL",
+      "module": "FloorPlanEditor",
+      "investigation_targets": [
+        "engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx (ValidatedInput, Room component)",
+        "engine/frontend/src/store/floorPlanStore.js (updateRoom, resizeRoom)"
+      ],
+      "questions_to_answer": [
+        "What is the call order when user types then drags?",
+        "Does ValidatedInput have onBlur that overwrites drag result?",
+        "Is there a re-render loop causing stale closures?",
+        "Are updateRoom and resizeRoom using same or different logic?",
+        "Is there timestamp-based ordering for concurrent updates?"
+      ],
+      "hypothesis": "ValidatedInput onBlur or onChange fires after resize, reverting to typed value"
+    },
+    {
+      "scout_id": "SCOUT-003",
+      "name": "2D-3D State Synchronization Scout",
+      "priority": "HIGH",
+      "module": "FloorPlanEditor + FloorPlan3DView",
+      "investigation_targets": [
+        "engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+        "engine/frontend/src/components/FloorPlanEditor/FloorPlan3DView.jsx",
+        "engine/frontend/src/components/FloorPlanEditor/Room3D.jsx",
+        "engine/frontend/src/store/floorPlanStore.js"
+      ],
+      "questions_to_answer": [
+        "How does 3D view subscribe to room state changes?",
+        "Is 3D manipulation wired to update the store?",
+        "If user resizes in 3D, does 2D update?",
+        "Is there bidirectional sync or one-way?",
+        "What transforms are applied between 2D and 3D coordinates?"
+      ],
+      "hypothesis": "3D view may be read-only or have incomplete state sync"
+    },
+    {
+      "scout_id": "SCOUT-004",
+      "name": "Saving Indicator Truth Scout",
+      "priority": "HIGH",
+      "module": "State Persistence",
+      "investigation_targets": [
+        "engine/frontend/src/hooks/useLocalStorage.js",
+        "engine/frontend/src/store/floorPlanStore.js"
+      ],
+      "questions_to_answer": [
+        "What triggers 'saving' status vs 'saved' status?",
+        "Is the debounce causing stale data to be saved?",
+        "Does saving reflect actual store state or component state?",
+        "Is there a race between saveNow() and debounced save?",
+        "What happens if user drags during debounce window?"
+      ],
+      "hypothesis": "Saving indicator may show for any state change but debounce captures wrong snapshot"
+    },
+    {
+      "scout_id": "SCOUT-005",
+      "name": "HVAC Router Interaction Scout",
+      "priority": "MEDIUM",
+      "module": "HVACRouter",
+      "investigation_targets": [
+        "engine/frontend/src/components/HVACRouter/HVACRouter.jsx"
+      ],
+      "questions_to_answer": [
+        "Is equipment dragging properly updating state?",
+        "Does duct drawing state machine handle all edge cases?",
+        "Is there undo/redo support for HVAC operations?",
+        "How does equipment selection interact with properties panel?",
+        "Are there orphaned state issues on Escape during drawing?"
+      ],
+      "hypothesis": "HVAC may have similar hierarchy issues; no undo means mistakes are permanent"
+    },
+    {
+      "scout_id": "SCOUT-006",
+      "name": "Electrical Router Interaction Scout",
+      "priority": "MEDIUM",
+      "module": "ElectricalRouter",
+      "investigation_targets": [
+        "engine/frontend/src/components/ElectricalRouter/ElectricalRouter.jsx"
+      ],
+      "questions_to_answer": [
+        "Same interaction audit as HVAC",
+        "Wire drawing state management",
+        "Equipment property updates",
+        "Selection consistency"
+      ],
+      "hypothesis": "Likely mirrors HVAC issues with no undo/redo"
+    },
+    {
+      "scout_id": "SCOUT-007",
+      "name": "Plumbing Router Interaction Scout",
+      "priority": "MEDIUM",
+      "module": "PlumbingRouter",
+      "investigation_targets": [
+        "engine/frontend/src/components/PlumbingRouter/PlumbingRouter.jsx"
+      ],
+      "questions_to_answer": [
+        "Same interaction audit as HVAC/Electrical",
+        "Pipe drawing state management",
+        "Fixture placement and properties",
+        "Selection consistency"
+      ],
+      "hypothesis": "Likely mirrors HVAC issues with no undo/redo"
+    },
+    {
+      "scout_id": "SCOUT-008",
+      "name": "Event Bubbling & Priority Scout",
+      "priority": "HIGH",
+      "module": "Cross-Module",
+      "investigation_targets": [
+        "engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx",
+        "engine/frontend/src/hooks/useKeyboardShortcuts.js"
+      ],
+      "questions_to_answer": [
+        "Is stopPropagation used correctly on drag/resize?",
+        "Can keyboard shortcuts fire during drag operation?",
+        "Is there a global event priority system?",
+        "What happens if user Ctrl+Z during resize?",
+        "Are window event listeners cleaned up properly?"
+      ],
+      "hypothesis": "Event listeners may conflict or fire out of order"
+    },
+    {
+      "scout_id": "SCOUT-009",
+      "name": "Throttle & Debounce Correctness Scout",
+      "priority": "HIGH",
+      "module": "Performance Utilities",
+      "investigation_targets": [
+        "engine/frontend/src/components/FloorPlanEditor/FloorPlanEditor.jsx (throttle usage)",
+        "engine/frontend/src/hooks/useLocalStorage.js (debounce usage)"
+      ],
+      "questions_to_answer": [
+        "Are throttled handlers capturing stale state via closures?",
+        "Is the throttle trailing edge causing final position to be lost?",
+        "Does debounce cancel correctly on component unmount?",
+        "Are there memory leaks from uncanceled timers?",
+        "Is throttle interval (16ms) appropriate for resize precision?"
+      ],
+      "hypothesis": "Throttle may drop final resize position; debounce may save stale state"
+    },
+    {
+      "scout_id": "SCOUT-010",
+      "name": "API Save Integration Scout",
+      "priority": "MEDIUM",
+      "module": "Backend Integration",
+      "investigation_targets": [
+        "engine/frontend/src/api/client.js",
+        "engine/api/routes/"
+      ],
+      "questions_to_answer": [
+        "Is floor plan data saved to backend or only localStorage?",
+        "What endpoints exist for persisting floor plans?",
+        "Is there optimistic vs confirmed save distinction?",
+        "How does error handling affect save indicator?"
+      ],
+      "hypothesis": "Saving may be localStorage only; no backend sync yet"
+    }
+  ],
+
+  "expected_outputs": {
+    "per_scout": "SCOUT_REPORT_{id}.json with findings, root cause, and suggested fixes",
+    "synthesis": "UX_SYNTHESIS.json grouping issues by root cause",
+    "fix_plan": "UX_FIX_WAVE_PLAN.json with prioritized implementation waves"
+  },
+
+  "success_criteria": [
+    "Root cause of resize not working is identified",
+    "Last Action = Truth hierarchy is documented",
+    "All modules audited for similar issues",
+    "Clear fix recommendations with file/line targets"
+  ]
+}

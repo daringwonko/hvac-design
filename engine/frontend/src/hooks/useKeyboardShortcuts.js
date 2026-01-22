@@ -1,6 +1,48 @@
 import { useEffect, useCallback, useRef } from 'react'
 
 /**
+ * Shared ref to track if a drag/resize operation is in progress.
+ * Components can set this to prevent keyboard shortcuts from firing
+ * during active manipulation operations.
+ *
+ * Usage in components:
+ *   import { operationInProgressRef } from './hooks/useKeyboardShortcuts'
+ *
+ *   // When drag/resize starts:
+ *   operationInProgressRef.current = true
+ *
+ *   // When drag/resize ends:
+ *   operationInProgressRef.current = false
+ */
+export const operationInProgressRef = { current: false }
+
+/**
+ * Shared ref to track if a modal is currently open.
+ * When a modal is open, Escape should only close the modal,
+ * not trigger other shortcuts like clearing room selection.
+ *
+ * Usage in modal components:
+ *   import { modalOpenRef } from '../hooks/useKeyboardShortcuts'
+ *
+ *   // When modal opens:
+ *   useEffect(() => {
+ *     if (isOpen) {
+ *       modalOpenRef.current = true
+ *     }
+ *     return () => {
+ *       modalOpenRef.current = false
+ *     }
+ *   }, [isOpen])
+ *
+ *   // Or for simpler cases:
+ *   useEffect(() => {
+ *     modalOpenRef.current = isOpen
+ *     return () => { modalOpenRef.current = false }
+ *   }, [isOpen])
+ */
+export const modalOpenRef = { current: false }
+
+/**
  * Check if event target is an input element
  */
 const isInputElement = (element) => {
@@ -44,12 +86,16 @@ const matchesShortcut = (event, shortcut) => {
  * @param {boolean} options.enabled - Whether shortcuts are active (default: true)
  * @param {boolean} options.allowInInputs - Allow shortcuts in input fields (default: false)
  * @param {string[]} options.allowedShortcutsInInputs - Shortcuts that work even in inputs
+ * @param {boolean} options.isOperationInProgress - Skip shortcuts during drag/resize operations (default: false)
+ * @param {boolean} options.useGlobalOperationCheck - Also check operationInProgressRef (default: true)
  */
 export function useKeyboardShortcuts(shortcuts, options = {}) {
   const {
     enabled = true,
     allowInInputs = false,
-    allowedShortcutsInInputs = ['Escape']
+    allowedShortcutsInInputs = ['Escape'],
+    isOperationInProgress = false,
+    useGlobalOperationCheck = true
   } = options
 
   // Use ref to always have latest shortcuts without re-adding listeners
@@ -59,6 +105,17 @@ export function useKeyboardShortcuts(shortcuts, options = {}) {
   const handleKeyDown = useCallback((event) => {
     // Skip if disabled
     if (!enabled) return
+
+    // Skip if a drag/resize operation is in progress
+    // This prevents unexpected behavior like undo during active manipulation
+    if (isOperationInProgress) return
+    if (useGlobalOperationCheck && operationInProgressRef.current) return
+
+    // When a modal is open and Escape is pressed, let the modal handle it
+    // This prevents Escape from both closing the modal AND clearing selection
+    if (modalOpenRef.current && event.key === 'Escape') {
+      return
+    }
 
     // Check if in input field
     const inInput = isInputElement(event.target)
@@ -78,7 +135,7 @@ export function useKeyboardShortcuts(shortcuts, options = {}) {
         return
       }
     }
-  }, [enabled, allowInInputs, allowedShortcutsInInputs])
+  }, [enabled, allowInInputs, allowedShortcutsInInputs, isOperationInProgress, useGlobalOperationCheck])
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown)
