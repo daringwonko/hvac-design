@@ -40,7 +40,7 @@ export function SessionProvider({ children }) {
     }
   }, [])
 
-  // Sync floor plan changes to session
+  // UX-003: Auto-detect module completion based on store changes
   useEffect(() => {
     if (floorPlanStore.floorPlan?.rooms?.length > 0) {
       sessionStore.updateModuleData('floor-plan', {
@@ -48,8 +48,31 @@ export function SessionProvider({ children }) {
         totalArea: floorPlanStore.getTotalArea?.() || 0,
         hasRooms: true,
       })
+      // Auto-complete floor plan module if rooms exist
+      sessionStore.checkModuleCompletion('floor-plan', { rooms: floorPlanStore.floorPlan.rooms })
     }
   }, [floorPlanStore.floorPlan?.rooms?.length])
+
+  // Auto-detect HVAC completion
+  useEffect(() => {
+    if (hvacStore.equipment?.length > 0) {
+      sessionStore.checkModuleCompletion('hvac', { equipment: hvacStore.equipment })
+    }
+  }, [hvacStore.equipment?.length])
+
+  // Auto-detect Electrical completion
+  useEffect(() => {
+    if (electricalStore.equipment?.length > 0) {
+      sessionStore.checkModuleCompletion('electrical', { equipment: electricalStore.equipment })
+    }
+  }, [electricalStore.equipment?.length])
+
+  // Auto-detect Plumbing completion
+  useEffect(() => {
+    if (plumbingStore.fixtures?.length > 0) {
+      sessionStore.checkModuleCompletion('plumbing', { fixtures: plumbingStore.fixtures })
+    }
+  }, [plumbingStore.fixtures?.length])
 
   // Context value with all session utilities
   const contextValue = {
@@ -93,6 +116,18 @@ export function SessionProvider({ children }) {
     validationErrors: sessionStore.validationErrors,
     addValidationError: sessionStore.addValidationError,
     clearModuleErrors: sessionStore.clearModuleErrors,
+
+    // UX-003: Completion tracking
+    checkModuleCompletion: sessionStore.checkModuleCompletion,
+    getIncompleteRequiredModules: sessionStore.getIncompleteRequiredModules,
+    getNextRecommendedModule: sessionStore.getNextRecommendedModule,
+
+    // UX-006: Project connection
+    connectToProject: sessionStore.connectToProject,
+    saveToProject: sessionStore.saveToProject,
+    createProject: sessionStore.createProject,
+    pendingChanges: sessionStore.pendingChanges,
+    lastSyncAt: sessionStore.lastSyncAt,
 
     // Constants
     MODULE_ORDER,
@@ -207,6 +242,52 @@ export function useSessionReadiness() {
     canDesignPlumbing: session.moduleStatus['floor-plan']?.completed,
     canExport: session.session.isReadyForExport(),
     completionPercentage: session.getCompletionPercentage(),
+  }
+}
+
+/**
+ * Hook for project management - UX-006
+ */
+export function useProject() {
+  const session = useSession()
+
+  const connectProject = useCallback(async (projectId) => {
+    return session.connectToProject(projectId)
+  }, [session])
+
+  const saveProject = useCallback(async () => {
+    return session.saveToProject()
+  }, [session])
+
+  const createNewProject = useCallback(async (projectData) => {
+    return session.createProject(projectData)
+  }, [session])
+
+  return {
+    projectId: session.projectId,
+    projectName: session.projectName,
+    pendingChanges: session.pendingChanges,
+    lastSyncAt: session.lastSyncAt,
+    connectProject,
+    saveProject,
+    createNewProject,
+    setProjectName: session.session.setProjectName,
+  }
+}
+
+/**
+ * Hook for auto-completion tracking - UX-003
+ */
+export function useCompletionTracking() {
+  const session = useSession()
+
+  return {
+    moduleStatus: session.moduleStatus,
+    completionPercentage: session.getCompletionPercentage(),
+    incompleteRequired: session.getIncompleteRequiredModules(),
+    nextRecommended: session.getNextRecommendedModule(),
+    completeModule: session.completeModule,
+    markIncomplete: session.markModuleIncomplete,
   }
 }
 

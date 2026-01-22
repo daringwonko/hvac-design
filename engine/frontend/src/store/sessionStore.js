@@ -519,6 +519,165 @@ const useSessionStore = create(
           updatedAt: state.updatedAt,
         }
       },
+
+      // === UX-003: Completion Tracking Helpers ===
+
+      /**
+       * Check completion based on external store state
+       * Called by SessionContext to auto-detect module completion
+       */
+      checkModuleCompletion: (moduleId, storeState) => {
+        const thresholds = {
+          'floor-plan': (state) => state.rooms?.length > 0,
+          'hvac': (state) => state.equipment?.length > 0,
+          'electrical': (state) => state.equipment?.length > 0,
+          'plumbing': (state) => state.fixtures?.length > 0,
+          'review': () => false, // Manual completion only
+        }
+
+        const isComplete = thresholds[moduleId]?.(storeState) ?? false
+        const { moduleStatus } = get()
+
+        // Only update if status changed
+        if (moduleStatus[moduleId]?.completed !== isComplete) {
+          if (isComplete) {
+            get().completeModule(moduleId, { auto: true })
+          } else {
+            get().markModuleIncomplete(moduleId)
+          }
+        }
+
+        return isComplete
+      },
+
+      /**
+       * Get list of incomplete required modules
+       */
+      getIncompleteRequiredModules: () => {
+        const { moduleStatus } = get()
+        return MODULE_ORDER.filter(moduleId => {
+          const info = MODULE_INFO[moduleId]
+          return info.required && !moduleStatus[moduleId]?.completed
+        })
+      },
+
+      /**
+       * Get next recommended module to work on
+       */
+      getNextRecommendedModule: () => {
+        const { moduleStatus, currentModule } = get()
+
+        // First, check if current module is incomplete
+        if (!moduleStatus[currentModule]?.completed) {
+          return currentModule
+        }
+
+        // Find first incomplete module in order
+        for (const moduleId of MODULE_ORDER) {
+          if (!moduleStatus[moduleId]?.completed) {
+            return moduleId
+          }
+        }
+
+        // All complete, go to review
+        return 'review'
+      },
+
+      // === UX-006: Project Connection ===
+
+      /**
+       * Connect session to an existing project
+       */
+      connectToProject: async (projectId) => {
+        try {
+          const response = await fetch(`/api/v1/projects/${projectId}`)
+          const result = await response.json()
+
+          if (result.success && result.data) {
+            const project = result.data
+            set({
+              projectId: project.id,
+              projectName: project.name,
+              projectAddress: project.address || '',
+              projectCity: project.city || '',
+              projectProvince: project.province || 'ON',
+              buildingType: project.building_type || 'residential',
+              status: SESSION_STATUS.IN_PROGRESS,
+              updatedAt: new Date().toISOString(),
+            })
+            return { success: true, project }
+          } else {
+            return { success: false, error: result.error }
+          }
+        } catch (error) {
+          return { success: false, error: error.message }
+        }
+      },
+
+      /**
+       * Save session to project (persist to backend)
+       */
+      saveToProject: async () => {
+        const state = get()
+        try {
+          const response = await fetch(`/api/v1/projects/${state.projectId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: state.projectName,
+              address: state.projectAddress,
+              city: state.projectCity,
+              province: state.projectProvince,
+              building_type: state.buildingType,
+              session_data: state.getSessionSummary(),
+            }),
+          })
+
+          const result = await response.json()
+          if (result.success) {
+            get().markSynced()
+            return { success: true }
+          } else {
+            return { success: false, error: result.error }
+          }
+        } catch (error) {
+          return { success: false, error: error.message }
+        }
+      },
+
+      /**
+       * Create new project and connect
+       */
+      createProject: async (projectData = {}) => {
+        const state = get()
+        try {
+          const response = await fetch('/api/v1/projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: projectData.name || state.projectName,
+              address: projectData.address || state.projectAddress,
+              city: projectData.city || state.projectCity,
+              province: projectData.province || state.projectProvince,
+              building_type: projectData.building_type || state.buildingType,
+            }),
+          })
+
+          const result = await response.json()
+          if (result.success && result.data) {
+            set({
+              projectId: result.data.id,
+              projectName: result.data.name,
+              updatedAt: new Date().toISOString(),
+            })
+            return { success: true, project: result.data }
+          } else {
+            return { success: false, error: result.error }
+          }
+        } catch (error) {
+          return { success: false, error: error.message }
+        }
+      },
     }),
     {
       name: 'mep-session-storage',
