@@ -1,5 +1,6 @@
-import { Outlet, NavLink } from 'react-router-dom'
+import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { useState } from 'react'
+import { SessionBreadcrumb, ProgressBadge } from '../SessionNav'
 
 const navigation = [
   { name: 'Dashboard', path: '/', icon: HomeIcon },
@@ -178,11 +179,17 @@ export default function Layout() {
 
       {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden md:ml-0">
-        {/* Header */}
+        {/* Header - UX-004: Added session breadcrumb and progress */}
         <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6">
-          <h1 className="text-xl font-semibold">MEP Design Studio</h1>
           <div className="flex items-center gap-4">
-            <button className="btn btn-secondary text-sm">
+            <h1 className="text-xl font-semibold hidden lg:block">MEP Design Studio</h1>
+            {/* Session breadcrumb navigation */}
+            <SessionBreadcrumb className="hidden md:flex" />
+          </div>
+          <div className="flex items-center gap-4">
+            {/* Progress badge */}
+            <ProgressBadge />
+            <button className="btn btn-secondary text-sm hidden sm:block">
               API Docs
             </button>
             <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center">
