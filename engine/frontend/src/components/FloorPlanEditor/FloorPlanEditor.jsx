@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import useFloorPlanStore from '../../store/floorPlanStore'
 import useSelectionStore from '../../store/selectionStore'
 import { useFloorPlanPersistence } from '../../hooks/useLocalStorage'
-import { useKeyboardShortcuts, FLOOR_PLAN_SHORTCUTS } from '../../hooks/useKeyboardShortcuts'
+import { useKeyboardShortcuts, FLOOR_PLAN_SHORTCUTS, operationInProgressRef } from '../../hooks/useKeyboardShortcuts'
 import KeyboardShortcutsModal from '../ui/KeyboardShortcutsModal'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import FloorPlan3DView from './FloorPlan3DView'
@@ -142,6 +142,12 @@ function Room({ room, scale, isSelected, onSelect, onToggleSelect, onDrag, onRes
   const [resizeHandle, setResizeHandle] = useState(null)
   // Use ref for dragStart to prevent throttle recreation on every mouse move
   const dragStartRef = useRef({ x: 0, y: 0 })
+
+  // Connect drag/resize state to global operation ref for keyboard shortcut protection
+  useEffect(() => {
+    operationInProgressRef.current = isDragging || isResizing
+    return () => { operationInProgressRef.current = false }
+  }, [isDragging, isResizing])
 
   const x = room.position.x * scale
   const y = room.position.y * scale

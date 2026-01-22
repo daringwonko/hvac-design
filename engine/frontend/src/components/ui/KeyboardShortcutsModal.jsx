@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { SHORTCUT_DEFINITIONS, getShortcutLabel } from '../../hooks/useKeyboardShortcuts'
+import { SHORTCUT_DEFINITIONS, getShortcutLabel, modalOpenRef } from '../../hooks/useKeyboardShortcuts'
 
 export default function KeyboardShortcutsModal({ isOpen, onClose }) {
   const [searchQuery, setSearchQuery] = useState('')
@@ -10,6 +10,15 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }) {
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
       setTimeout(() => searchInputRef.current?.focus(), 100)
+    }
+  }, [isOpen])
+
+  // Track modal open state to prevent Escape from clearing selection
+  // When modal is open, Escape should only close the modal
+  useEffect(() => {
+    modalOpenRef.current = isOpen
+    return () => {
+      modalOpenRef.current = false
     }
   }, [isOpen])
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { modalOpenRef } from '../../hooks/useKeyboardShortcuts'
 
 /**
  * Reusable confirmation dialog component.
@@ -31,6 +32,15 @@ export default function ConfirmDialog({
   useEffect(() => {
     if (isOpen && cancelRef.current) {
       cancelRef.current.focus()
+    }
+  }, [isOpen])
+
+  // Track modal open state to prevent Escape from clearing selection
+  // When modal is open, Escape should only close the modal
+  useEffect(() => {
+    modalOpenRef.current = isOpen
+    return () => {
+      modalOpenRef.current = false
     }
   }, [isOpen])
 
