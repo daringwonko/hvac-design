@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import useHVACStore from '../../store/hvacStore'
+import useFloorPlanStore from '../../store/floorPlanStore'
 
 // HVAC Equipment types
 const EQUIPMENT_TYPES = {
@@ -399,17 +401,39 @@ function RoomOverlay({ rooms, scale }) {
   )
 }
 
-export default function HVACRouter({ floorPlan, onSave }) {
-  // State
-  const [equipment, setEquipment] = useState([])
-  const [ducts, setDucts] = useState([])
-  const [selectedItem, setSelectedItem] = useState(null)
-  const [tool, setTool] = useState('select')
+export default function HVACRouter({ floorPlan: floorPlanProp, onSave }) {
+  // STATE-001: Connect to Zustand stores instead of local useState
+  const {
+    equipment,
+    ducts,
+    selectedItem,
+    tool,
+    isDrawingDuct,
+    ductStart,
+    setEquipment,
+    addEquipment,
+    updateEquipment,
+    deleteEquipment,
+    setDucts,
+    addDuct,
+    updateDuct,
+    deleteDuct,
+    setSelectedItem,
+    clearSelection,
+    setTool,
+    setIsDrawingDuct,
+    setDuctStart,
+    resetDuctDrawing,
+    moveEquipment,
+  } = useHVACStore()
+
+  // WORKFLOW-002/003: Get floor plan from shared store
+  const { floorPlan: storeFloorPlan } = useFloorPlanStore()
+
+  // Local UI state (not persisted)
   const [systemType, setSystemType] = useState('vrf')
   const [scale, setScale] = useState(0.05)
   const [calculations, setCalculations] = useState(null)
-  const [isDrawingDuct, setIsDrawingDuct] = useState(false)
-  const [ductStart, setDuctStart] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
 
   const svgRef = useRef(null)
@@ -417,13 +441,12 @@ export default function HVACRouter({ floorPlan, onSave }) {
   // Reset duct drawing state when tool changes away from 'duct'
   useEffect(() => {
     if (tool !== 'duct') {
-      setIsDrawingDuct(false)
-      setDuctStart(null)
+      resetDuctDrawing()
     }
-  }, [tool])
+  }, [tool, resetDuctDrawing])
 
-  // Default floor plan if none provided
-  const plan = floorPlan || {
+  // Use floor plan from prop, store, or default (priority: prop > store > default)
+  const plan = floorPlanProp || (storeFloorPlan.rooms.length > 0 ? storeFloorPlan : {
     name: 'Sample Floor Plan',
     overall_dimensions: { width: 17850, depth: 7496 },
     rooms: [
@@ -431,7 +454,7 @@ export default function HVACRouter({ floorPlan, onSave }) {
       { id: 'r2', name: 'Kitchen', position: { x: 4614, y: 1355 }, dimensions: { width: 5630, depth: 2980 } },
       { id: 'r3', name: 'Master Bedroom', position: { x: 15050, y: 0 }, dimensions: { width: 2800, depth: 5941 } },
     ]
-  }
+  })
 
   const canvasWidth = plan.overall_dimensions.width * scale + 100
   const canvasHeight = plan.overall_dimensions.depth * scale + 100
@@ -439,7 +462,7 @@ export default function HVACRouter({ floorPlan, onSave }) {
   // Generate unique ID
   const generateId = () => `hvac_${Date.now().toString(36)}`
 
-  // Handle drop from palette
+  // Handle drop from palette - STATE-001: Uses Zustand actions
   const handleDrop = (e) => {
     e.preventDefault()
     const type = e.dataTransfer.getData('equipment_type')
@@ -460,7 +483,7 @@ export default function HVACRouter({ floorPlan, onSave }) {
       }
     }
 
-    setEquipment(prev => [...prev, newEquipment])
+    addEquipment(newEquipment)
     setSelectedItem({ type: 'equipment', id: newEquipment.id })
   }
 
@@ -472,10 +495,10 @@ export default function HVACRouter({ floorPlan, onSave }) {
     e.dataTransfer.setData('equipment_type', type)
   }
 
-  // Handle duct drawing
+  // Handle duct drawing - STATE-001: Uses Zustand actions
   const handleCanvasClick = (e) => {
     if (tool !== 'duct') {
-      setSelectedItem(null)
+      clearSelection()
       return
     }
 
@@ -494,39 +517,33 @@ export default function HVACRouter({ floorPlan, onSave }) {
         width: 150,
         type: 'supply'
       }
-      setDucts(prev => [...prev, newDuct])
+      addDuct(newDuct)
       setDuctStart({ x, y }) // Continue from end point
     }
   }
 
-  // Handle equipment drag
+  // Handle equipment drag - STATE-001: Uses Zustand action
   const handleEquipmentDrag = (id, newX, newY) => {
-    setEquipment(prev => prev.map(e =>
-      e.id === id ? { ...e, position: { x: newX, y: newY } } : e
-    ))
+    moveEquipment(id, { x: newX, y: newY })
   }
 
-  // Update item
+  // Update item - STATE-001: Uses Zustand actions
   const handleUpdateItem = (id, updates) => {
     if (selectedItem?.type === 'equipment') {
-      setEquipment(prev => prev.map(e =>
-        e.id === id ? { ...e, ...updates } : e
-      ))
+      updateEquipment(id, updates)
     } else {
-      setDucts(prev => prev.map(d =>
-        d.id === id ? { ...d, ...updates } : d
-      ))
+      updateDuct(id, updates)
     }
   }
 
-  // Delete item
+  // Delete item - STATE-001: Uses Zustand actions
   const handleDeleteItem = (id) => {
     if (selectedItem?.type === 'equipment') {
-      setEquipment(prev => prev.filter(e => e.id !== id))
+      deleteEquipment(id)
     } else {
-      setDucts(prev => prev.filter(d => d.id !== id))
+      deleteDuct(id)
     }
-    setSelectedItem(null)
+    clearSelection()
   }
 
   // Calculate system
@@ -598,31 +615,33 @@ export default function HVACRouter({ floorPlan, onSave }) {
       const result = await response.json()
 
       if (result.success && result.data) {
-        // Add equipment from API response
+        // Add equipment from API response - STATE-001: Uses Zustand actions
         if (result.data.equipment && result.data.equipment.length > 0) {
-          const newEquipment = result.data.equipment.map((eq, idx) => ({
-            id: generateId(),
-            type: eq.type || 'mini_split_indoor',
-            position: { x: eq.x || 100 + idx * 150, y: eq.y || 100 + idx * 100 },
-            specs: {
-              btu: eq.capacity ? eq.capacity * 3412 : 12000,
-              cfm: eq.airflow || 100
-            },
-            label: eq.label
-          }))
-          setEquipment(prev => [...prev, ...newEquipment])
+          result.data.equipment.forEach((eq, idx) => {
+            addEquipment({
+              id: generateId(),
+              type: eq.type || 'mini_split_indoor',
+              position: { x: eq.x || 100 + idx * 150, y: eq.y || 100 + idx * 100 },
+              specs: {
+                btu: eq.capacity ? eq.capacity * 3412 : 12000,
+                cfm: eq.airflow || 100
+              },
+              label: eq.label
+            })
+          })
         }
 
-        // Add ducts from API response
+        // Add ducts from API response - STATE-001: Uses Zustand actions
         if (result.data.ducts && result.data.ducts.length > 0) {
-          const newDucts = result.data.ducts.map(d => ({
-            id: generateId(),
-            start: { x: d.startX, y: d.startY },
-            end: { x: d.endX, y: d.endY },
-            width: d.size?.width || 200,
-            type: d.type || 'supply'
-          }))
-          setDucts(prev => [...prev, ...newDucts])
+          result.data.ducts.forEach(d => {
+            addDuct({
+              id: generateId(),
+              start: { x: d.startX, y: d.startY },
+              end: { x: d.endX, y: d.endY },
+              width: d.size?.width || 200,
+              type: d.type || 'supply'
+            })
+          })
         }
 
         // Update calculations from design
@@ -650,15 +669,14 @@ export default function HVACRouter({ floorPlan, onSave }) {
     }
   }
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts - STATE-001: Uses Zustand actions
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'v' || e.key === 'V') setTool('select')
       if (e.key === 'd' || e.key === 'D') setTool('duct')
       if (e.key === 'm' || e.key === 'M') setTool('measure')
       if (e.key === 'Escape') {
-        setIsDrawingDuct(false)
-        setDuctStart(null)
+        resetDuctDrawing()
         setTool('select')
       }
       if (e.key === 'Delete' && selectedItem) {
@@ -668,7 +686,7 @@ export default function HVACRouter({ floorPlan, onSave }) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedItem])
+  }, [selectedItem, setTool, resetDuctDrawing])
 
   return (
     <div className="h-full flex flex-col">

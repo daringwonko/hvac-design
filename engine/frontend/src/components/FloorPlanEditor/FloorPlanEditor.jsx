@@ -7,6 +7,7 @@ import KeyboardShortcutsModal from '../ui/KeyboardShortcutsModal'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import FloorPlan3DView from './FloorPlan3DView'
 import ImportDialog from '../ImportDialog/ImportDialog'
+import { throttle } from '../../utils/throttle'
 
 // Room type colors for visual distinction
 const ROOM_COLORS = {
@@ -73,27 +74,7 @@ const validateDimension = (value, min, max) => {
   return { valid: true, value: num }
 }
 
-// Throttle helper for smooth drag/resize performance
-const throttle = (func, limit) => {
-  let inThrottle = false
-  let pendingArgs = null
-
-  return function(...args) {
-    if (!inThrottle) {
-      func.apply(this, args)
-      inThrottle = true
-      setTimeout(() => {
-        inThrottle = false
-        if (pendingArgs) {
-          func.apply(this, pendingArgs)
-          pendingArgs = null
-        }
-      }, limit)
-    } else {
-      pendingArgs = args
-    }
-  }
-}
+// Throttle imported from ../../utils/throttle.js (MOUSE-002 fix)
 
 // Validated input component with error feedback
 function ValidatedInput({ value, onChange, min, max, label }) {
@@ -270,20 +251,20 @@ function Room({ room, scale, isSelected, onSelect, onToggleSelect, onDrag, onRes
         {((room.dimensions.width * room.dimensions.depth) / 1000000).toFixed(1)} m²
       </text>
 
-      {/* 8-point resize handles */}
+      {/* 8-point resize handles (MOUSE-001, MOUSE-009 fix: increased size from 10 to 16) */}
       {isSelected && RESIZE_HANDLES.map(handle => (
         <rect
           key={handle.id}
           className="resize-handle"
           data-handle={handle.id}
-          x={x + width * handle.x - 5}
-          y={y + depth * handle.y - 5}
-          width={10}
-          height={10}
+          x={x + width * handle.x - 8}
+          y={y + depth * handle.y - 8}
+          width={16}
+          height={16}
           fill="#ffffff"
           stroke={roomColor}
           strokeWidth={2}
-          rx={2}
+          rx={3}
           style={{ cursor: handle.cursor }}
         />
       ))}
@@ -1248,8 +1229,8 @@ export default function FloorPlanEditor() {
                 onMouseMove={handleCanvasMouseMove}
                 onMouseUp={handleCanvasMouseUp}
               >
-                {/* Background */}
-                <rect width={canvasWidth} height={canvasHeight} fill="#0f172a" />
+                {/* Background - pointerEvents none allows clicks to pass through for box selection (MOUSE-003 fix) */}
+                <rect width={canvasWidth} height={canvasHeight} fill="#0f172a" style={{ pointerEvents: 'none' }} />
 
                 {/* Transform group for padding and pan offset */}
                 <g transform={`translate(${50 + viewOffset.x}, ${50 + viewOffset.y})`}>
